@@ -520,42 +520,45 @@ def zscore_chart(history: pd.DataFrame, ticker: str, z_entry: float) -> go.Figur
 # ─────────────────────────────────────────────────────────────
 # UI sections
 # ─────────────────────────────────────────────────────────────
+import uuid   # add this import at the top of your file if not already there
+
 def render_stock_card(r: dict, z_entry: float, capital: float):
-    """Detailed card for a single stock."""
-    badge = status_badge(r["status"])
+    """Detailed card for a single stock with truly unique chart keys."""
+    ticker = r.get("ticker", "UNKNOWN")
+    bucket = r.get("bucket", "Unknown")
+
     st.markdown(
-        f"### {r['ticker']}  "
-        f"<span class='subtle'>({r['bucket']})</span>  {badge}",
+        f"### {ticker} <span class='subtle'>({bucket})</span>",
         unsafe_allow_html=True,
     )
 
+    # Metrics (keep your existing metrics code)
     c1, c2, c3, c4, c5, c6 = st.columns(6)
-    c1.metric("Price", fmt_price(r["close"]))
-    c2.metric("Z-Score", fmt_z(r["z"]))
-    c3.metric("20-SMA", fmt_price(r["sma20"]))
-    c4.metric("50-SMA", fmt_price(r["trend_sma"]) if not np.isnan(r["trend_sma"]) else "—")
-    c5.metric("ATR", fmt_price(r["atr"]))
-    c6.metric("Trail (now)", fmt_price(r["trail_now"]))
+    c1.metric("Price", fmt_price(r.get("close", 0)))
+    c2.metric("Z-Score", fmt_z(r.get("z", 0)))
+    c3.metric("20-SMA", fmt_price(r.get("sma20", 0)))
+    c4.metric("50-SMA", fmt_price(r.get("trend_sma", 0)) if not np.isnan(r.get("trend_sma", np.nan)) else "—")
+    c5.metric("ATR", fmt_price(r.get("atr", 0)))
+    c6.metric("Trail (now)", fmt_price(r.get("trail_now", 0)))
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Buy Trigger", fmt_price(r["buy_trigger"]), delta=fmt_pct(-r["dist_pct"]))
-    c2.metric("Initial Stop", fmt_price(r["initial_stop"]))
-    c3.metric("Mean-Rev Exit", fmt_price(r["mean_exit"]))
-    c4.metric("R:R to SMA", fmt_rr(r["rr"]))
+    c1.metric("Buy Trigger", fmt_price(r.get("buy_trigger", 0)))
+    c2.metric("Initial Stop", fmt_price(r.get("initial_stop", 0)))
+    c3.metric("Mean-Rev Exit", fmt_price(r.get("mean_exit", 0)))
+    c4.metric("R:R to SMA", fmt_rr(r.get("rr", 0)))
 
-    # Distance & position sizing hint
+    # Distance & sizing
     dist_col, size_col, filter_col = st.columns(3)
     with dist_col:
         st.markdown(
-            f"**Distance to trigger:** {fmt_price(r['dist_dollar'])} "
-            f"({fmt_pct(r['dist_pct'])})"
+            f"**Distance to trigger:** {fmt_price(r.get('dist_dollar', 0))} "
+            f"({fmt_pct(r.get('dist_pct', 0))})"
         )
     with size_col:
-        risk_per_share = r["risk"]
+        risk_per_share = r.get("risk", 0)
         if risk_per_share > 0 and capital > 0:
-            # 1% risk of capital by default as a sizing reference
             shares = int((capital * 0.01) / risk_per_share)
-            notional = shares * r["buy_trigger"]
+            notional = shares * r.get("buy_trigger", 0)
             st.markdown(
                 f"**Size @ 1% risk:** {shares:,} sh · "
                 f"{fmt_price(notional)} notional"
@@ -563,40 +566,46 @@ def render_stock_card(r: dict, z_entry: float, capital: float):
         else:
             st.markdown("**Size @ 1% risk:** —")
     with filter_col:
-        filt = "ON (Close > 50-SMA)" if r["use_filter"] else "OFF"
-        trend = "pass ✓" if r["trend_ok"] else "fail ✗"
+        filt = "ON (Close > 50-SMA)" if r.get("use_filter") else "OFF"
+        trend = "pass ✓" if r.get("trend_ok") else "fail ✗"
         st.markdown(f"**Trend filter:** {filt} · **Status:** {trend}")
 
-    if r["signal"]:
+    if r.get("signal"):
         st.success(
-            f"**BUY SIGNAL** — Z ({r['z']:.2f}) < {z_entry}"
-            + (" and Close > 50-SMA" if r["use_filter"] else " (no trend filter)")
+            f"**BUY SIGNAL** — Z ({r.get('z', 0):.2f}) < {z_entry}"
+            + (" and Close > 50-SMA" if r.get("use_filter") else " (no trend filter)")
         )
-    elif r["status"] in ("NEAR", "WATCH"):
+    elif r.get("status") in ("NEAR", "WATCH"):
         st.warning(
-            f"Within {r['dist_pct']:.1f}% of trigger "
-            f"(${r['buy_trigger']:.2f}). Watching for Z < {z_entry}."
+            f"Within {r.get('dist_pct', 0):.1f}% of trigger "
+            f"(${r.get('buy_trigger', 0):.2f}). Watching for Z < {z_entry}."
         )
 
-    # Charts
+    # Charts with unique keys (this should finally fix it)
+    unique_id = str(uuid.uuid4())[:8]   # random suffix
+
     ch1, ch2 = st.columns([1.4, 1])
     with ch1:
+        fig_price = price_chart(
+            r.get("history"),
+            ticker,
+            r.get("buy_trigger", 0),
+            r.get("initial_stop", 0),
+            r.get("mean_exit", 0),
+            trend_sma_len=50,
+            show_trend=True,
+        )
         st.plotly_chart(
-            price_chart(
-                r["history"],
-                r["ticker"],
-                r["buy_trigger"],
-                r["initial_stop"],
-                r["mean_exit"],
-                trend_sma_len=50,
-                show_trend=True,
-            ),
+            fig_price,
             use_container_width=True,
+            key=f"price_{ticker}_{bucket}_{unique_id}",   # Truly unique
         )
     with ch2:
+        fig_z = zscore_chart(r.get("history"), ticker, z_entry)
         st.plotly_chart(
-            zscore_chart(r["history"], r["ticker"], z_entry),
+            fig_z,
             use_container_width=True,
+            key=f"zscore_{ticker}_{bucket}_{unique_id}",   # Truly unique
         )
 
 
@@ -605,9 +614,15 @@ def render_bucket_tab(
     z_entry: float,
     capital: float,
     bucket_label: str,
-    filter_desc: str,
+    trend_sma: int,          # <--- ADD THIS PARAMETER
 ):
     st.markdown(f"<div class='section-header'>{bucket_label}</div>", unsafe_allow_html=True)
+    
+    # Dynamic filter description
+    filter_desc = (
+        "No trend filter (same as Momentum)" if trend_sma == 0
+        else f"Mild trend filter: Close > {trend_sma}-SMA"
+    )
     st.caption(filter_desc)
 
     if not rows:
@@ -827,10 +842,11 @@ def main():
         )
         trend_sma = st.slider(
             "Trend SMA length (Quality)",
-            min_value=20,
+            min_value=0,
             max_value=200,
-            value=DEFAULT_TREND_SMA,
+            value=50,
             step=5,
+            help="0 = no trend filter (same as Momentum bucket). Higher = stricter filter.",
         )
         sma_window = st.number_input(
             "Z-score SMA window",
@@ -1024,8 +1040,7 @@ def main():
             z_entry,
             capital,
             "Quality bucket",
-            f"Mild trend filter: Close must be above the {trend_sma}-SMA, "
-            f"and Z-score < {z_entry}.",
+            trend_sma,
         )
 
     with tab_compare:
