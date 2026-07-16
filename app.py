@@ -1,12 +1,13 @@
 """
 Dual-Mode Tactical Trading System — Live Streamlit Dashboard
 =============================================================
-Momentum bucket  : NVDA, META, NET          — Z < -1.5 (no trend filter)
-Quality bucket   : NOW, MSFT, GOOGL, ...   — Z < -1.5 AND Close > 50-SMA
+Momentum bucket  : NVDA, META, NET
+Quality bucket   : NOW, MSFT, GOOGL, ...
 
-Entry  : Z-score < threshold (and trend filter for Quality)
-Trail  : Close - ATR_mult × ATR  (only raise)
-Exit   : Trailing stop hit OR Z-score > 0
+Default entry : Z-score < threshold only (no trend filter on any stock)
+Optional UI   : Enable trend filter (Close > N-SMA) for the Quality bucket
+Trail         : Close - ATR_mult × ATR  (only raise)
+Exit          : Trailing stop hit OR Z-score > 0
 """
 
 from __future__ import annotations
@@ -30,7 +31,9 @@ DEFAULT_Z_ENTRY = -1.5
 DEFAULT_ATR_MULT = 2.0
 DEFAULT_SMA_WINDOW = 20
 DEFAULT_ATR_WINDOW = 14
-DEFAULT_TREND_SMA = 50
+# Trend filter is OFF by default; user can enable it in the sidebar.
+DEFAULT_USE_TREND_FILTER = False
+DEFAULT_TREND_SMA = 50  # only applied when the filter is enabled
 DEFAULT_CAPITAL = 100_000.0
 HISTORY_DAYS = 180
 
@@ -182,14 +185,21 @@ def get_levels(
       buy_trigger = SMA + z_entry * std
       initial_stop (if buy at trigger) = buy_trigger - atr_mult * ATR
       mean_exit   = SMA  (Z > 0)
-      signal      = (Z < z_entry) and (trend_ok if filter else True)
+      signal      = (Z < z_entry) and (trend_ok if use_filter else True)
       trail       = Close - atr_mult * ATR  (raised only when in a trade)
+
+    When use_filter is False (the default), trend_ok is always True and
+    the N-SMA is still computed for display / comparison only.
     """
+    # Always compute a positive-length trend SMA for charts/tables, even when
+    # the filter is off. Filter application is controlled only by use_filter.
+    trend_sma_len = max(int(trend_sma), 1)
+    min_bars = max(60, sma_window + 5, atr_window + 5, trend_sma_len + 5)
     df = get_data(ticker)
-    if df is None or len(df) < max(60, trend_sma + 5):
+    if df is None or len(df) < min_bars:
         return None
 
-    df = compute_indicators(df, sma_window, atr_window, trend_sma)
+    df = compute_indicators(df, sma_window, atr_window, trend_sma_len)
     last = df.iloc[-1]
 
     close = float(last["Close"])
@@ -209,6 +219,7 @@ def get_levels(
     mean_exit = sma
     trail_now = close - (atr_mult * atr)
 
+    # Default strategy: no trend gate. Filter only when use_filter is True.
     trend_ok = True
     if use_filter and not np.isnan(trend_sma_val):
         trend_ok = close > trend_sma_val
@@ -238,6 +249,7 @@ def get_levels(
         "std": std,
         "atr": atr,
         "trend_sma": trend_sma_val,
+        "trend_sma_len": trend_sma_len,
         "buy_trigger": buy_trigger,
         "initial_stop": initial_stop,
         "mean_exit": mean_exit,
@@ -327,7 +339,7 @@ def rows_to_dataframe(rows: list[dict]) -> pd.DataFrame:
                 "Price": r["close"],
                 "Z-Score": r["z"],
                 "20-SMA": r["sma20"],
-                "50-SMA": r["trend_sma"],
+                "Trend SMA": r["trend_sma"],
                 "ATR": r["atr"],
                 "Buy Trigger": r["buy_trigger"],
                 "Initial Stop": r["initial_stop"],
@@ -378,7 +390,7 @@ def style_overview(df: pd.DataFrame, z_entry: float):
                 "Price": "${:,.2f}",
                 "Z-Score": "{:+.2f}",
                 "20-SMA": "${:,.2f}",
-                "50-SMA": "${:,.2f}",
+                "Trend SMA": "${:,.2f}",
                 "ATR": "${:,.2f}",
                 "Buy Trigger": "${:,.2f}",
                 "Initial Stop": "${:,.2f}",
@@ -614,16 +626,15 @@ def render_bucket_tab(
     z_entry: float,
     capital: float,
     bucket_label: str,
-    trend_sma: int,          # <--- ADD THIS PARAMETER
+    use_filter: bool,
+    trend_sma: int,
 ):
     st.markdown(f"<div class='section-header'>{bucket_label}</div>", unsafe_allow_html=True)
-    
-    # Dynamic filter description
-    filter_desc = (
-        "No trend filter (same as Momentum)" if trend_sma == 0
-        else f"Mild trend filter: Close > {trend_sma}-SMA"
-    )
-    st.caption(filter_desc)
+
+    if use_filter:
+        st.caption(f"Trend filter ON: Close must be > {trend_sma}-SMA (in addition to Z entry).")
+    else:
+        st.caption("No trend filter — entry when Z-score < threshold only.")
 
     if not rows:
         st.error("No data available for this bucket. Check network / yfinance.")
@@ -644,7 +655,7 @@ def render_bucket_tab(
         "Price",
         "Z-Score",
         "20-SMA",
-        "50-SMA",
+        "Trend SMA",
         "ATR",
         "Buy Trigger",
         "Initial Stop",
@@ -750,8 +761,21 @@ def render_filter_comparison(
     )
 
 
-def render_rules_tab(z_entry: float, atr_mult: float, sma_window: int, atr_window: int, trend_sma: int):
+def render_rules_tab(
+    z_entry: float,
+    atr_mult: float,
+    sma_window: int,
+    atr_window: int,
+    trend_sma: int,
+    use_trend_filter: bool,
+):
     st.markdown("### Dual-Mode Strategy Rules")
+
+    quality_filter = (
+        f"Optional: Close > {trend_sma}-SMA (**currently ON**)"
+        if use_trend_filter
+        else f"Optional: Close > {trend_sma}-SMA (**currently OFF** — default)"
+    )
 
     st.markdown(
         f"""
@@ -759,19 +783,23 @@ def render_rules_tab(z_entry: float, atr_mult: float, sma_window: int, atr_windo
 
 | Bucket | Tickers | Trend filter |
 |--------|---------|--------------|
-| **Momentum** | {", ".join(MOMENTUM_BUCKET)} | None — pure mean reversion |
-| **Quality** | {", ".join(QUALITY_BUCKET)} | Mild: Close > {trend_sma}-SMA |
+| **Momentum** | {", ".join(MOMENTUM_BUCKET)} | Never — pure mean reversion |
+| **Quality** | {", ".join(QUALITY_BUCKET)} | {quality_filter} |
 
 #### Indicators
 - **{sma_window}-SMA** and rolling std → Z-score = (Close − SMA) / std
 - **ATR** ({atr_window}-period true range average)
-- **{trend_sma}-SMA** — trend filter for Quality only
+- **{trend_sma}-SMA** — optional trend filter for Quality only (sidebar toggle)
 
-#### Entry
+#### Entry (default)
 1. **Z-score < {z_entry}** (price stretched below the {sma_window}-SMA)
-2. **Quality only:** Close must also be **above the {trend_sma}-SMA**
-3. **Buy Trigger Price** = SMA + ({z_entry} × std)  
+2. **Buy Trigger Price** = SMA + ({z_entry} × std)  
    → the price level where Z equals {z_entry}
+
+#### Optional Quality filter (sidebar)
+When **Trend filter** is enabled for Quality names only:
+- Close must also be **above the {trend_sma}-SMA**
+- Momentum names are never gated by this filter
 
 #### Risk management
 - **Initial stop** (if filled at trigger) = Buy Trigger − ({atr_mult} × ATR)
@@ -786,7 +814,7 @@ def render_rules_tab(z_entry: float, atr_mult: float, sma_window: int, atr_windo
 | Mode | Philosophy |
 |------|------------|
 | Momentum | Catch deep dips in high-beta names with no trend gate — faster entries |
-| Quality | Same dip-buy math, but only when the intermediate trend is still intact |
+| Quality | Same dip-buy math; optional intermediate-trend gate via the sidebar |
 
 #### What this dashboard does **not** do
 - It does **not** place orders or connect to a broker
@@ -840,14 +868,6 @@ def main():
             value=DEFAULT_ATR_MULT,
             step=0.25,
         )
-        trend_sma = st.slider(
-            "Trend SMA length (Quality)",
-            min_value=0,
-            max_value=200,
-            value=50,
-            step=5,
-            help="0 = no trend filter (same as Momentum bucket). Higher = stricter filter.",
-        )
         sma_window = st.number_input(
             "Z-score SMA window",
             min_value=10,
@@ -864,6 +884,30 @@ def main():
         )
 
         st.divider()
+        st.markdown("**Optional trend filter**")
+        st.caption(
+            "Off by default for every stock. When on, only the Quality bucket "
+            "requires Close > N-SMA in addition to the Z entry."
+        )
+        use_trend_filter = st.toggle(
+            "Enable trend filter (Quality only)",
+            value=DEFAULT_USE_TREND_FILTER,
+            help=(
+                "Default is OFF: pure Z-score mean reversion for all names. "
+                "Turn on to require Close > trend SMA for Quality bucket only."
+            ),
+        )
+        trend_sma = st.slider(
+            "Trend SMA length",
+            min_value=10,
+            max_value=200,
+            value=DEFAULT_TREND_SMA,
+            step=5,
+            disabled=not use_trend_filter,
+            help="Only used when the trend filter is enabled. Higher = stricter.",
+        )
+
+        st.divider()
         auto = st.toggle("Auto-refresh (60s)", value=False)
         if st.button("🔄 Refresh data now", use_container_width=True, type="primary"):
             get_data.clear()
@@ -873,9 +917,13 @@ def main():
         st.markdown("**Buckets**")
         st.markdown(f"Momentum: `{' · '.join(MOMENTUM_BUCKET)}`")
         st.markdown(f"Quality: `{' · '.join(QUALITY_BUCKET)}`")
+        filter_status = (
+            f"Quality filter ON: Close > {trend_sma}-SMA"
+            if use_trend_filter
+            else "Trend filter OFF (default — all names pure Z entry)"
+        )
         st.caption(
-            f"Entry Z < {z_entry} · Trail {atr_mult}×ATR · "
-            f"Quality filter: Close > {trend_sma}-SMA"
+            f"Entry Z < {z_entry} · Trail {atr_mult}×ATR · {filter_status}"
         )
 
         if auto:
@@ -896,6 +944,8 @@ def main():
     )
 
     # ── Load data ────────────────────────────────────────────
+    # Default: no trend filter on any stock. Quality only gets the filter
+    # when the user enables it in the sidebar.
     with st.spinner("Fetching market data…"):
         momentum_rows = scan_bucket(
             MOMENTUM_BUCKET,
@@ -909,7 +959,7 @@ def main():
         )
         quality_rows = scan_bucket(
             QUALITY_BUCKET,
-            use_filter=True,
+            use_filter=use_trend_filter,
             z_entry=z_entry,
             atr_mult=atr_mult,
             sma_window=int(sma_window),
@@ -974,7 +1024,7 @@ def main():
                 "Price",
                 "Z-Score",
                 "20-SMA",
-                "50-SMA",
+                "Trend SMA",
                 "ATR",
                 "Buy Trigger",
                 "Initial Stop",
@@ -1031,7 +1081,8 @@ def main():
             z_entry,
             capital,
             "Momentum bucket",
-            "Original strategy — no trend filter. Entry when Z-score < threshold only.",
+            use_filter=False,
+            trend_sma=int(trend_sma),
         )
 
     with tab_qual:
@@ -1040,7 +1091,8 @@ def main():
             z_entry,
             capital,
             "Quality bucket",
-            trend_sma,
+            use_filter=use_trend_filter,
+            trend_sma=int(trend_sma),
         )
 
     with tab_compare:
@@ -1049,8 +1101,8 @@ def main():
             unsafe_allow_html=True,
         )
         st.caption(
-            "Compare entry eligibility for any name under Momentum rules "
-            "(no filter) vs Quality rules (trend filter on)."
+            "Compare entry eligibility for any name with pure Z-entry rules "
+            f"vs an optional trend filter (Close > {int(trend_sma)}-SMA)."
         )
         cmp_ticker = st.selectbox(
             "Ticker",
@@ -1070,7 +1122,12 @@ def main():
 
     with tab_rules:
         render_rules_tab(
-            z_entry, atr_mult, int(sma_window), int(atr_window), int(trend_sma)
+            z_entry,
+            atr_mult,
+            int(sma_window),
+            int(atr_window),
+            int(trend_sma),
+            use_trend_filter,
         )
 
     st.markdown(
