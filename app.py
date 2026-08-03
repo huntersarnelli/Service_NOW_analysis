@@ -8,19 +8,36 @@ Default entry : Z-score < threshold only (no trend filter on any stock)
 Optional UI   : Enable trend filter (Close > N-SMA) for the Quality bucket
 Trail         : Close - ATR_mult × ATR  (only raise)
 Exit          : Trailing stop hit OR Z-score > 0
+
+Layout
+------
+app.py                 — entry point, sidebar, trading tabs
+data/market.py         — OHLCV, indicators, live levels / signals
+data/media_earnings.py — informational media + earnings (not in signals)
+ui/media_earnings_tab.py — Media & Earnings tab UI
 """
 
 from __future__ import annotations
 
+import os
+import uuid
 import warnings
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-import yfinance as yf
+
+from data.market import (
+    ALL_TICKERS,
+    MOMENTUM_BUCKET,
+    QUALITY_BUCKET,
+    get_data,
+    get_levels,
+)
+from ui.media_earnings_tab import clear_media_earnings_cache, render_media_earnings_tab
 
 warnings.filterwarnings("ignore")
 
@@ -35,11 +52,6 @@ DEFAULT_ATR_WINDOW = 14
 DEFAULT_USE_TREND_FILTER = False
 DEFAULT_TREND_SMA = 50  # only applied when the filter is enabled
 DEFAULT_CAPITAL = 100_000.0
-HISTORY_DAYS = 180
-
-MOMENTUM_BUCKET = ["NVDA", "META", "NET"]
-QUALITY_BUCKET = ["NOW", "MSFT", "GOOGL", "PANW", "CRWD", "DDOG", "CRM"]
-ALL_TICKERS = MOMENTUM_BUCKET + QUALITY_BUCKET
 
 # ─────────────────────────────────────────────────────────────
 # Page config
@@ -120,56 +132,21 @@ st.markdown(
 
 
 # ─────────────────────────────────────────────────────────────
-# Data & indicators
+# Cached market download (Streamlit layer — data.market is cache-free)
 # ─────────────────────────────────────────────────────────────
 @st.cache_data(ttl=60, show_spinner=False)
-def get_data(ticker: str, days: int = HISTORY_DAYS) -> Optional[pd.DataFrame]:
-    """Download OHLCV history for a single ticker."""
-    end = datetime.now().date() + timedelta(days=1)
-    start = end - timedelta(days=days)
-    try:
-        df = yf.download(
-            ticker,
-            start=start.strftime("%Y-%m-%d"),
-            end=end.strftime("%Y-%m-%d"),
-            multi_level_index=False,
-            progress=False,
-            auto_adjust=True,
-        )
-        if df is None or df.empty:
-            return None
-        cols = [c for c in ["Open", "High", "Low", "Close", "Volume"] if c in df.columns]
-        return df[cols].dropna().copy()
-    except Exception:
-        return None
+def cached_get_data(ticker: str, days: int = 180):
+    return get_data(ticker, days=days)
 
 
-def compute_indicators(
-    df: pd.DataFrame,
-    sma_window: int,
-    atr_window: int,
-    trend_sma: int,
-) -> pd.DataFrame:
-    """Add SMA, std, Z-score, trend SMA, and ATR columns."""
-    out = df.copy()
-    out["sma"] = out["Close"].rolling(sma_window).mean()
-    out["std"] = out["Close"].rolling(sma_window).std()
-    out["zscore"] = (out["Close"] - out["sma"]) / out["std"]
-    out["trend_sma"] = out["Close"].rolling(trend_sma).mean()
+# Monkey-patch scan path: get_levels calls get_data directly.
+# Wrap via a thin cached facade used only if we need it — for minimal
+# behavioral change we re-export get_data through cache by patching the
+# market module's get_data used inside get_levels.
+# Simpler approach: cache at get_levels level.
 
-    tr = pd.concat(
-        [
-            out["High"] - out["Low"],
-            (out["High"] - out["Close"].shift(1)).abs(),
-            (out["Low"] - out["Close"].shift(1)).abs(),
-        ],
-        axis=1,
-    ).max(axis=1)
-    out["atr"] = tr.rolling(atr_window).mean()
-    return out
-
-
-def get_levels(
+@st.cache_data(ttl=60, show_spinner=False)
+def cached_get_levels(
     ticker: str,
     use_filter: bool,
     z_entry: float,
@@ -178,96 +155,13 @@ def get_levels(
     atr_window: int,
     trend_sma: int,
 ) -> Optional[dict]:
-    """
-    Compute live levels and signal for one ticker.
-
-    Exact strategy logic:
-      buy_trigger = SMA + z_entry * std
-      initial_stop (if buy at trigger) = buy_trigger - atr_mult * ATR
-      mean_exit   = SMA  (Z > 0)
-      signal      = (Z < z_entry) and (trend_ok if use_filter else True)
-      trail       = Close - atr_mult * ATR  (raised only when in a trade)
-
-    When use_filter is False (the default), trend_ok is always True and
-    the N-SMA is still computed for display / comparison only.
-    """
-    # Always compute a positive-length trend SMA for charts/tables, even when
-    # the filter is off. Filter application is controlled only by use_filter.
-    trend_sma_len = max(int(trend_sma), 1)
-    min_bars = max(60, sma_window + 5, atr_window + 5, trend_sma_len + 5)
-    df = get_data(ticker)
-    if df is None or len(df) < min_bars:
-        return None
-
-    df = compute_indicators(df, sma_window, atr_window, trend_sma_len)
-    last = df.iloc[-1]
-
-    close = float(last["Close"])
-    sma = float(last["sma"])
-    std = float(last["std"])
-    atr = float(last["atr"])
-    z = float(last["zscore"])
-    trend_sma_val = (
-        float(last["trend_sma"]) if pd.notna(last["trend_sma"]) else float("nan")
+    """Cached live levels. history DataFrame is included (hashable via cache)."""
+    return get_levels(
+        ticker, use_filter, z_entry, atr_mult, sma_window, atr_window, trend_sma
     )
 
-    if any(np.isnan(x) for x in (sma, std, atr, z)) or std == 0:
-        return None
 
-    buy_trigger = sma + (z_entry * std)
-    initial_stop = buy_trigger - (atr_mult * atr)
-    mean_exit = sma
-    trail_now = close - (atr_mult * atr)
-
-    # Default strategy: no trend gate. Filter only when use_filter is True.
-    trend_ok = True
-    if use_filter and not np.isnan(trend_sma_val):
-        trend_ok = close > trend_sma_val
-
-    signal = (z < z_entry) and trend_ok
-    dist_pct = (close - buy_trigger) / close * 100.0
-    dist_dollar = close - buy_trigger
-    risk = buy_trigger - initial_stop
-    reward = mean_exit - buy_trigger
-    rr = (reward / risk) if risk > 0 else float("nan")
-
-    # Proximity tiers for UI
-    if signal:
-        status = "BUY"
-    elif dist_pct < 5:
-        status = "NEAR"
-    elif dist_pct < 12:
-        status = "WATCH"
-    else:
-        status = "FAR"
-
-    return {
-        "ticker": ticker,
-        "close": close,
-        "z": z,
-        "sma20": sma,
-        "std": std,
-        "atr": atr,
-        "trend_sma": trend_sma_val,
-        "trend_sma_len": trend_sma_len,
-        "buy_trigger": buy_trigger,
-        "initial_stop": initial_stop,
-        "mean_exit": mean_exit,
-        "trail_now": trail_now,
-        "trend_ok": trend_ok,
-        "use_filter": use_filter,
-        "signal": signal,
-        "status": status,
-        "dist_pct": dist_pct,
-        "dist_dollar": dist_dollar,
-        "risk": risk,
-        "reward": reward,
-        "rr": rr,
-        "history": df,
-    }
-
-
-def scan_bucket(
+def scan_bucket_cached(
     tickers: list[str],
     use_filter: bool,
     z_entry: float,
@@ -279,10 +173,11 @@ def scan_bucket(
 ) -> list[dict]:
     rows = []
     for t in tickers:
-        info = get_levels(
+        info = cached_get_levels(
             t, use_filter, z_entry, atr_mult, sma_window, atr_window, trend_sma
         )
         if info:
+            info = dict(info)  # shallow copy so we can attach bucket
             info["bucket"] = bucket_name
             rows.append(info)
     return rows
@@ -532,8 +427,6 @@ def zscore_chart(history: pd.DataFrame, ticker: str, z_entry: float) -> go.Figur
 # ─────────────────────────────────────────────────────────────
 # UI sections
 # ─────────────────────────────────────────────────────────────
-import uuid   # add this import at the top of your file if not already there
-
 def render_stock_card(r: dict, z_entry: float, capital: float):
     """Detailed card for a single stock with truly unique chart keys."""
     ticker = r.get("ticker", "UNKNOWN")
@@ -544,12 +437,16 @@ def render_stock_card(r: dict, z_entry: float, capital: float):
         unsafe_allow_html=True,
     )
 
-    # Metrics (keep your existing metrics code)
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("Price", fmt_price(r.get("close", 0)))
     c2.metric("Z-Score", fmt_z(r.get("z", 0)))
     c3.metric("20-SMA", fmt_price(r.get("sma20", 0)))
-    c4.metric("50-SMA", fmt_price(r.get("trend_sma", 0)) if not np.isnan(r.get("trend_sma", np.nan)) else "—")
+    c4.metric(
+        "50-SMA",
+        fmt_price(r.get("trend_sma", 0))
+        if not np.isnan(r.get("trend_sma", np.nan))
+        else "—",
+    )
     c5.metric("ATR", fmt_price(r.get("atr", 0)))
     c6.metric("Trail (now)", fmt_price(r.get("trail_now", 0)))
 
@@ -559,7 +456,6 @@ def render_stock_card(r: dict, z_entry: float, capital: float):
     c3.metric("Mean-Rev Exit", fmt_price(r.get("mean_exit", 0)))
     c4.metric("R:R to SMA", fmt_rr(r.get("rr", 0)))
 
-    # Distance & sizing
     dist_col, size_col, filter_col = st.columns(3)
     with dist_col:
         st.markdown(
@@ -593,8 +489,7 @@ def render_stock_card(r: dict, z_entry: float, capital: float):
             f"(${r.get('buy_trigger', 0):.2f}). Watching for Z < {z_entry}."
         )
 
-    # Charts with unique keys (this should finally fix it)
-    unique_id = str(uuid.uuid4())[:8]   # random suffix
+    unique_id = str(uuid.uuid4())[:8]
 
     ch1, ch2 = st.columns([1.4, 1])
     with ch1:
@@ -604,20 +499,20 @@ def render_stock_card(r: dict, z_entry: float, capital: float):
             r.get("buy_trigger", 0),
             r.get("initial_stop", 0),
             r.get("mean_exit", 0),
-            trend_sma_len=50,
+            trend_sma_len=r.get("trend_sma_len", 50),
             show_trend=True,
         )
         st.plotly_chart(
             fig_price,
             use_container_width=True,
-            key=f"price_{ticker}_{bucket}_{unique_id}",   # Truly unique
+            key=f"price_{ticker}_{bucket}_{unique_id}",
         )
     with ch2:
         fig_z = zscore_chart(r.get("history"), ticker, z_entry)
         st.plotly_chart(
             fig_z,
             use_container_width=True,
-            key=f"zscore_{ticker}_{bucket}_{unique_id}",   # Truly unique
+            key=f"zscore_{ticker}_{bucket}_{unique_id}",
         )
 
 
@@ -648,7 +543,6 @@ def render_bucket_tab(
     m2.metric("Active BUY signals", len(signals))
     m3.metric("Near / Watch", len(near))
 
-    # Compact table
     df = rows_to_dataframe(rows)
     display_cols = [
         "Ticker",
@@ -709,10 +603,10 @@ def render_filter_comparison(
         f"(Close > {trend_sma}-SMA)."
     )
 
-    no_f = get_levels(
+    no_f = cached_get_levels(
         ticker, False, z_entry, atr_mult, sma_window, atr_window, trend_sma
     )
-    with_f = get_levels(
+    with_f = cached_get_levels(
         ticker, True, z_entry, atr_mult, sma_window, atr_window, trend_sma
     )
 
@@ -746,7 +640,6 @@ def render_filter_comparison(
             else:
                 st.info("No entry under these rules right now.")
 
-    # Shared price chart
     st.plotly_chart(
         price_chart(
             no_f["history"],
@@ -759,7 +652,6 @@ def render_filter_comparison(
         ),
         use_container_width=True,
     )
-
 
 def render_rules_tab(
     z_entry: float,
@@ -816,6 +708,12 @@ When **Trend filter** is enabled for Quality names only:
 | Momentum | Catch deep dips in high-beta names with no trend gate — faster entries |
 | Quality | Same dip-buy math; optional intermediate-trend gate via the sidebar |
 
+#### Media & Earnings tab
+- **Informational only** — news sentiment and earnings calendar / history
+- Does **not** change Z-entry, stops, or BUY signals
+- Live media via Alpha Vantage NEWS_SENTIMENT when an API key is set;
+  otherwise placeholder headlines for UI development
+
 #### What this dashboard does **not** do
 - It does **not** place orders or connect to a broker
 - Trailing-stop path is shown as the *current* trail level (`Close − {atr_mult}×ATR`);
@@ -833,6 +731,38 @@ When **Trend filter** is enabled for Quality names only:
             rf"Trail_t = C_t - {atr_mult}\cdot\mathrm{{ATR}}_t \quad (\text{{raise only}})"
         )
         st.latex(r"Exit: \quad Trail\ hit \;\mathbf{or}\; Z_t > 0")
+
+
+# ─────────────────────────────────────────────────────────────
+# Secrets / API keys (set once locally — no re-entry each run)
+# ─────────────────────────────────────────────────────────────
+def resolve_alpha_vantage_key() -> tuple[str, str]:
+    """
+    Load Alpha Vantage key with set-and-forget priority:
+
+      1. .streamlit/secrets.toml  →  st.secrets["ALPHA_VANTAGE_API_KEY"]
+      2. Environment variable     →  ALPHA_VANTAGE_API_KEY
+
+    Returns (key, source_label). Empty key means placeholders will be used.
+    """
+    # 1) Streamlit secrets (best local "set once" option)
+    try:
+        # Accessing st.secrets raises if the file is missing or key absent
+        secret_val = st.secrets.get("ALPHA_VANTAGE_API_KEY", None)
+        if secret_val:
+            key = str(secret_val).strip()
+            if key and key not in ("paste_your_key_here", "your_key_here"):
+                return key, ".streamlit/secrets.toml"
+    except Exception:
+        # No secrets file, or Streamlit not fully initialized — fall through
+        pass
+
+    # 2) Process environment (setx / $env: / system env)
+    env_val = (os.environ.get("ALPHA_VANTAGE_API_KEY") or "").strip()
+    if env_val and env_val not in ("paste_your_key_here", "your_key_here"):
+        return env_val, "environment variable ALPHA_VANTAGE_API_KEY"
+
+    return "", "not configured"
 
 
 # ─────────────────────────────────────────────────────────────
@@ -908,9 +838,35 @@ def main():
         )
 
         st.divider()
+        st.markdown("**Media & Earnings**")
+        saved_key, key_source = resolve_alpha_vantage_key()
+        if saved_key:
+            st.success(f"API key loaded from **{key_source}**")
+            st.caption("Set once — no need to paste it every run.")
+            av_key = saved_key
+        else:
+            st.caption(
+                "No saved key found. Create `.streamlit/secrets.toml` once "
+                "(see secrets.toml.example), or set the env var. "
+                "Until then, media uses placeholders; earnings still work."
+            )
+            # One-off override for this session only (not persisted)
+            av_key = st.text_input(
+                "Alpha Vantage API key (session only)",
+                value="",
+                type="password",
+                help=(
+                    "Session-only. For set-and-forget, put the key in "
+                    ".streamlit/secrets.toml instead."
+                ),
+            )
+
+        st.divider()
         auto = st.toggle("Auto-refresh (60s)", value=False)
         if st.button("🔄 Refresh data now", use_container_width=True, type="primary"):
-            get_data.clear()
+            cached_get_data.clear()
+            cached_get_levels.clear()
+            clear_media_earnings_cache()
             st.rerun()
 
         st.divider()
@@ -928,7 +884,6 @@ def main():
 
         if auto:
             st.caption("Auto-refresh armed — page reloads ~every 60s.")
-            # Lightweight JS-free approach: Streamlit fragment / meta refresh
             st.markdown(
                 '<meta http-equiv="refresh" content="60">',
                 unsafe_allow_html=True,
@@ -947,7 +902,7 @@ def main():
     # Default: no trend filter on any stock. Quality only gets the filter
     # when the user enables it in the sidebar.
     with st.spinner("Fetching market data…"):
-        momentum_rows = scan_bucket(
+        momentum_rows = scan_bucket_cached(
             MOMENTUM_BUCKET,
             use_filter=False,
             z_entry=z_entry,
@@ -957,7 +912,7 @@ def main():
             trend_sma=int(trend_sma),
             bucket_name="Momentum",
         )
-        quality_rows = scan_bucket(
+        quality_rows = scan_bucket_cached(
             QUALITY_BUCKET,
             use_filter=use_trend_filter,
             z_entry=z_entry,
@@ -994,11 +949,12 @@ def main():
         st.info("No stocks near a buy trigger right now (all > ~12% away).")
 
     # ── Tabs ─────────────────────────────────────────────────
-    tab_overview, tab_mom, tab_qual, tab_compare, tab_rules = st.tabs(
+    tab_overview, tab_mom, tab_qual, tab_media, tab_compare, tab_rules = st.tabs(
         [
             "📊 Overview",
             "⚡ Momentum Bucket",
             "◆ Quality Bucket",
+            "📰 Media & Earnings",
             "🔀 Filter Compare",
             "📘 Rules",
         ]
@@ -1045,7 +1001,6 @@ def main():
             )
 
             st.divider()
-            # Quick cards for active / near
             highlight = buy_signals + near_signals
             if highlight:
                 st.markdown("#### Priority names")
@@ -1095,6 +1050,13 @@ def main():
             trend_sma=int(trend_sma),
         )
 
+    with tab_media:
+        # Purely informational — does not touch signal rows above
+        render_media_earnings_tab(
+            tickers=ALL_TICKERS,
+            api_key=av_key or "",
+        )
+
     with tab_compare:
         st.markdown(
             "<div class='section-header'>With filter vs without filter</div>",
@@ -1133,7 +1095,8 @@ def main():
     st.markdown(
         "<div class='app-footer'>"
         "Dual-Mode Tactical Trading System · Educational / research use only · "
-        "Not investment advice · Data: Yahoo Finance via yfinance"
+        "Not investment advice · Data: Yahoo Finance via yfinance · "
+        "Media: Alpha Vantage NEWS_SENTIMENT (optional)"
         "</div>",
         unsafe_allow_html=True,
     )
