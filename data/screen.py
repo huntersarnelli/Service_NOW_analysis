@@ -7,20 +7,20 @@ sensible. The provenance table:
 
   Z(20) < -1.2 crossing        beats 200/200 random draws at 5/20/60 bars,
                                worth +0.3 to +0.4pp per trade
-                               [OVERREACTION_STUDY.md §2]
+                               [docs/02_OVERREACTION_STUDY.md §2]
   depth beyond -1.2            IRRELEVANT -- -1.2, -0.8 and -0.5 are
                                interchangeable, so a deeper dip is not a
-                               better dip [STRATEGY_REVIEW.md §5.4]
+                               better dip [docs/01_STRATEGY_REVIEW.md §5.4]
   no earnings within 20 days   away-from-earnings dips beat post-earnings dips
                                by +0.80pp at 20d, t=2.35, stable in both halves
-                               [OVERREACTION_STUDY.md §4]
+                               [docs/02_OVERREACTION_STUDY.md §4]
   market-wide, not lonely      dips where the market dragged the name down beat
                                name-specific dips at every horizon; the "lonely
                                faller" was the worst cohort measured
-                               [OVERREACTION_STUDY.md §5]
+                               [docs/02_OVERREACTION_STUDY.md §5]
   edge expires by 120 bars     the signal contributes nothing past ~120 bars;
                                what you hold after that is beta
-                               [OVERREACTION_STUDY.md §2]
+                               [docs/02_OVERREACTION_STUDY.md §2]
 
 Rules deliberately NOT implemented, because they were tested and failed:
 
@@ -28,11 +28,11 @@ Rules deliberately NOT implemented, because they were tested and failed:
   200-SMA regime gate          cut CAGR by two thirds [§5.9]
   post-earnings size-up        levers into the worst cohort measured [§4, §6]
   stacking every filter        the triple per-event screen lost significance
-                               entirely [OVERREACTION_STUDY.md §7]
+                               entirely [docs/02_OVERREACTION_STUDY.md §7]
   fixed-bar time exit          worse than the trail at every setting
-                               [OPTIMISATION_STUDY.md §2]
+                               [docs/03_OPTIMISATION_STUDY.md §2]
   model-predicted sizing       collapses into a volatility tilt
-                               [OPTIMISATION_STUDY.md §3]
+                               [docs/03_OPTIMISATION_STUDY.md §3]
 
 The screen's job is to decide WHERE new money goes. It never generates a sell.
 """
@@ -53,7 +53,7 @@ TRADING_DAYS = 252
 # ─────────────────────────────────────────────────────────────
 # 124 liquid US names, $20B+, across tech / financials / healthcare /
 # consumer / industrials / energy. The breadth matters more than the names:
-# PORTFOLIO_STUDY.md §5 measures 30 tech names as only 4.6 independent bets,
+# docs/04_PORTFOLIO_STUDY.md §5 measures 30 tech names as only 4.6 independent bets,
 # while 50 mixed names is 8.5. Diversification has to happen at the level of
 # bets, not tickers, which is why this list is deliberately not all tech.
 UNIVERSE_V2 = [
@@ -368,7 +368,7 @@ def effective_bets(frames: dict[str, pd.DataFrame], tickers: list[str],
 
     Participation ratio of the correlation matrix eigenvalue spectrum,
     (sum L)^2 / sum L^2. Equals n when every name is independent and 1 when
-    they are all the same bet. PORTFOLIO_STUDY.md §5 measures 30 tech names at
+    they are all the same bet. docs/04_PORTFOLIO_STUDY.md §5 measures 30 tech names at
     4.65 and the original META/NVDA/NET trio at 2.10 -- which is why no
     position-sizing rule ever moved the needle on that universe.
     """

@@ -1,37 +1,99 @@
-# Virtual environments (pip installs live here — never commit)
-.venv/
-venv/
-env/
-ENV/
-
-# Python cache / bytecode
+# ─── Python ──────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-
-# Distribution / packaging
+.Python
 build/
 dist/
-*.egg-info/
+develop-eggs/
+downloads/
+eggs/
 .eggs/
+sdist/
+wheels/
+*.egg-info/
+*.egg
+MANIFEST
 
-# Jupyter
+# ─── Virtual environments ────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# ─── Jupyter ─────────────────────────────────────────────────
 .ipynb_checkpoints/
 
-# OS / editor
-.DS_Store
+# ─── Testing / type checkers ─────────────────────────────────
+.pytest_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.hypothesis/
+
+# ─── IDE / OS ────────────────────────────────────────────────
 .idea/
 .vscode/
 *.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
 
-# Local env / secrets
+# ─── Secrets and personal data ───────────────────────────────
 .env
 .env.*
+!.env.example
 .streamlit/secrets.toml
-
-# Portfolio positions (personal data — never commit)
+*.pem
+*.key
+# your positions — never commit
 portfolio_data/
+
+# ─── Caches written by the studies ───────────────────────────
+studies/.cache_overreaction/
+*.log
+
+# ─── Data files ──────────────────────────────────────────────
+# Blanket-ignore bulk data formats anywhere in the tree...
+*.csv
+*.parquet
+*.pq
+*.feather
+*.arrow
+*.jsonl
+*.ndjson
+*.xlsx
+*.xls
+*.pickle
+*.pkl
+*.joblib
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.db
+*.sqlite
+*.sqlite3
+*.gz
+*.zip
+*.tar
+*.7z
+
+# Study outputs are NOT committed -- they are regenerated, not stored.
+# Every number in docs/ cites a file under studies/results/<nn>_<name>/, but
+# those files live only on your machine. To verify a claim, re-run the study
+# that produced it; DIRECTORY.md maps each runner to its output folder.
+# Full regeneration is roughly 40 minutes.
+studies/results/
+
+
+
 
 
 
@@ -166,4 +228,3 @@ secrets/
 credentials/
 *.pem
 *.key
-*.json

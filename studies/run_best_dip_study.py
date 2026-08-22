@@ -4,7 +4,7 @@ actually put more money in your pocket?
 
 Two gaps this closes
 --------------------
-1. OVERREACTION_STUDY.md §7's screen table tested "+ idiosyncratic" -- the
+1. docs/02_OVERREACTION_STUDY.md §7's screen table tested "+ idiosyncratic" -- the
    WORSE side of the idiosyncratic/market-wide split. The better side
    (market-wide declines) was measured in §5 but never screened, and neither
    was breadth. So the best available combination was never actually tried.
@@ -23,7 +23,7 @@ scheduled investing -- the cash drag eats the edge. Forcing deployment after
 
     python studies/run_best_dip_study.py
 
-Writes studies/results_best_dip/.
+Writes studies/results/11_best_dip/.
 """
 
 from __future__ import annotations
@@ -44,14 +44,14 @@ from studies.overreaction_lib import (  # noqa: E402
     load_prices, monthly_tstat,
 )
 
-RESULTS = ROOT / "studies" / "results_best_dip"
+RESULTS = ROOT / "studies" / "results" / "11_best_dip"
 RESULTS.mkdir(parents=True, exist_ok=True)
 
 WARMUP, START, END = "2014-06-01", "2015-01-01", "2026-08-22"
 Z_ENTRY = -1.2
 
 # Deployment windows. 2015+ is the full history the event study uses; the
-# others are carried over from STRATEGY_REVIEW.md for comparability.
+# others are carried over from docs/01_STRATEGY_REVIEW.md for comparability.
 DEPLOY_WINDOWS = {"2015+": "2015-01-01", "2020+": "2020-01-02", "2022+": "2022-01-03"}
 
 summary: dict = {}

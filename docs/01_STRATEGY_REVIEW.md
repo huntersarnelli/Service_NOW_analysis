@@ -182,7 +182,7 @@ tested both; the documented headline numbers only reproduce under `every_bar`.
 | **Study runner** | `studies/run_dip_study.py` | **new** |
 | Results (CSV + JSON) | `studies/results/` | 16 files |
 | Strategy A notebooks | `testing/test2.ipynb`, `test3.ipynb` | pre-existing |
-| B's original claims | `Aggressive_Dip_Accumulation_Strategy.md` | **no code ever committed** |
+| B's original claims | `legacy_Aggressive_Dip_Accumulation_Strategy.md` | **no code ever committed** |
 
 **Data:** Yahoo Finance via `yfinance`, split/dividend adjusted (`auto_adjust=True`),
 daily bars. Universe warm-up from 2022-09-01; study window 2023-01-03 → 2026-07-31

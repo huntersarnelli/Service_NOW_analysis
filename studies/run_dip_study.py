@@ -3,8 +3,8 @@ Comprehensive study of the Aggressive Dip Accumulation strategy.
 
 Run:  python studies/run_dip_study.py
 
-Writes CSVs and a JSON summary to studies/results/ so every number quoted in
-STRATEGY_REVIEW.md is reproducible and auditable.
+Writes CSVs and a JSON summary to studies/results/01_dip_study/ so every number quoted in
+docs/01_STRATEGY_REVIEW.md is reproducible and auditable.
 
 Sections
   1  Baseline reproduction of the documented claims
@@ -43,7 +43,7 @@ from studies.dip_backtest import (  # noqa: E402
     sweep,
 )
 
-RESULTS = ROOT / "studies" / "results"
+RESULTS = ROOT / "studies" / "results" / "01_dip_study"
 RESULTS.mkdir(parents=True, exist_ok=True)
 
 WARMUP_START = "2022-09-01"

@@ -1,7 +1,7 @@
 """
 Does adding a profit take to Strategy B help?
 
-Run:  python studies/run_profit_take.py   -> studies/results_profit_take/
+Run:  python studies/run_profit_take.py   -> studies/results/07_profit_take/
 
 The question
 ------------
@@ -50,7 +50,7 @@ from studies.dip_backtest import (  # noqa: E402
     BacktestConfig, buy_and_hold, load_prices, run_backtest, series_metrics,
 )
 
-RESULTS = ROOT / "studies" / "results_profit_take"
+RESULTS = ROOT / "studies" / "results" / "07_profit_take"
 RESULTS.mkdir(parents=True, exist_ok=True)
 
 TRIO = ["META", "NVDA", "NET"]
@@ -80,7 +80,7 @@ def show(df, cols=None, n=60):
 
 def save(df, name):
     df.to_csv(RESULTS / f"{name}.csv", index=False)
-    print(f"  -> studies/results_profit_take/{name}.csv")
+    print(f"  -> studies/results/07_profit_take/{name}.csv")
 
 
 def row(res, label):
@@ -302,7 +302,7 @@ def main():
     }
 
     (RESULTS / "summary.json").write_text(json.dumps(summary, indent=2, default=float), encoding="utf-8")
-    print("\n  -> studies/results_profit_take/summary.json")
+    print("\n  -> studies/results/07_profit_take/summary.json")
     banner("DONE")
     return summary
 

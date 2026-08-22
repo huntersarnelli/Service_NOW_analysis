@@ -1,7 +1,7 @@
 """
 How much of a portfolio should the dip strategy actually be?
 
-Run:  python studies/run_allocation.py   -> studies/results_allocation/
+Run:  python studies/run_allocation.py   -> studies/results/05_allocation/
 
 The 2022+ window (post-pandemic, including the 2022 bear) is the fairest test:
 it excludes the stimulus-distorted 2020-21 melt-up without also excluding the
@@ -30,7 +30,7 @@ from studies.dip_backtest import (  # noqa: E402
     BacktestConfig, buy_and_hold, load_prices, run_backtest, series_metrics,
 )
 
-RESULTS = ROOT / "studies" / "results_allocation"
+RESULTS = ROOT / "studies" / "results" / "05_allocation"
 RESULTS.mkdir(parents=True, exist_ok=True)
 
 TRIO = ["META", "NVDA", "NET"]
@@ -50,7 +50,7 @@ def show(df, n=50):
 
 def save(df, name):
     df.to_csv(RESULTS / f"{name}.csv", index=False)
-    print(f"  -> studies/results_allocation/{name}.csv")
+    print(f"  -> studies/results/05_allocation/{name}.csv")
 
 
 def blend(a: pd.Series, b: pd.Series, w: float, rebal: str = "Q") -> pd.Series:
@@ -159,7 +159,7 @@ def main():
     summary["final"] = final.to_dict("records")
 
     (RESULTS / "summary.json").write_text(json.dumps(summary, indent=2, default=float), encoding="utf-8")
-    print("\n  -> studies/results_allocation/summary.json")
+    print("\n  -> studies/results/05_allocation/summary.json")
     banner("DONE")
     return summary
 

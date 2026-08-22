@@ -3,7 +3,7 @@ Optimisation study — the two structural levers, tested honestly.
 
 Context
 -------
-STRATEGY_REVIEW.md §5.17 is the constraint every optimisation attempt in this
+docs/01_STRATEGY_REVIEW.md §5.17 is the constraint every optimisation attempt in this
 repo has to respect: re-optimising `z_entry` and `atr_mult` on a rolling
 walk-forward was 11.8pp WORSE than freezing them, and the fitted values jumped
 from Z<-0.8 to Z<-2.0 and 2xATR to 6xATR between adjacent windows. There is no
@@ -13,7 +13,7 @@ So this study does not tune parameters. It tests two STRUCTURAL changes, each
 motivated by a measured finding rather than by a grid search.
 
 LEVER 1 — the time exit
-    OVERREACTION_STUDY.md §2 measures the entry signal's excess over random
+    docs/02_OVERREACTION_STUDY.md §2 measures the entry signal's excess over random
     entries as +0.16 / +0.34 / +0.40 / -0.00 pp at 5 / 20 / 60 / 120 bars.
     The signal expires. Strategy B holds a lot 83 bars on average and exits on
     a 4xATR trail, so it routinely holds long past the point where the reason
@@ -40,7 +40,7 @@ LEVER 2 — conditional sizing
 
     python studies/run_optimisation_study.py
 
-Writes studies/results_optimisation/.
+Writes studies/results/09_optimisation/.
 """
 
 from __future__ import annotations
@@ -62,12 +62,12 @@ from studies.overreaction_lib import (  # noqa: E402
     load_prices, monthly_tstat,
 )
 
-RESULTS = ROOT / "studies" / "results_optimisation"
+RESULTS = ROOT / "studies" / "results" / "09_optimisation"
 RESULTS.mkdir(parents=True, exist_ok=True)
 
 WARMUP, START, END = "2014-06-01", "2015-01-01", "2026-08-22"
 
-# Windows carried over from STRATEGY_REVIEW.md so results are comparable
+# Windows carried over from docs/01_STRATEGY_REVIEW.md so results are comparable
 WINDOWS = {
     "2020+": "2020-01-02",
     "2022+": "2022-01-03",

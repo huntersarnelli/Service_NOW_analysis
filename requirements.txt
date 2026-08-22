@@ -12,3 +12,8 @@ lxml>=4.9
 
 # Optional: Alpha Vantage NEWS_SENTIMENT uses stdlib urllib only (no extra package).
 # Set ALPHA_VANTAGE_API_KEY env var or put it in .streamlit/secrets.toml.
+
+# Optional: the appV2.py Advisor tab. The app degrades gracefully without it --
+# the tab explains what is missing instead of erroring. Advisory only; it never
+# gates a signal, and it has never been backtested (see data/advisor.py).
+# anthropic>=0.40,<1.0

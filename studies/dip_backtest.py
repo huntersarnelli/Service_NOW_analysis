@@ -2,7 +2,7 @@
 Aggressive Dip Accumulation — portfolio backtest engine.
 
 This is the harness that was missing from the repo. The strategy document
-(Aggressive_Dip_Accumulation_Strategy.md) quotes $931,543 / 86.8% CAGR /
+(docs/legacy_Aggressive_Dip_Accumulation_Strategy.md) quotes $931,543 / 86.8% CAGR /
 1.83 Sharpe, but no code producing those numbers was ever committed, so the
 claims could not be checked. This module reproduces the documented rules
 exactly and makes every design choice an explicit, testable parameter.
@@ -115,7 +115,7 @@ class BacktestConfig:
 
     # ---- time exit ------------------------------------------------------
     # Close a lot unconditionally after this many trading bars, regardless of
-    # where the trail sits. OVERREACTION_STUDY.md measures the entry signal's
+    # where the trail sits. docs/02_OVERREACTION_STUDY.md measures the entry signal's
     # excess over random entries decaying to exactly zero by 120 bars, so a
     # lot held past that point is no longer expressing the signal it was
     # opened on -- it is holding beta with a stop under it. This makes the
@@ -135,7 +135,7 @@ class BacktestConfig:
     # ---- portfolio construction ------------------------------------------
     # max_weight above caps a single lot. It does NOT stop pyramiding from
     # accumulating an unbounded position: four 20% lots in one name is 80% of
-    # the book in one ticker, which is what STRATEGY_REVIEW.md §7.12 warns
+    # the book in one ticker, which is what docs/01_STRATEGY_REVIEW.md §7.12 warns
     # about ("25-35% positions across four names that are one AI/megacap-tech
     # factor is not a four-position portfolio"). max_ticker_weight caps the
     # CUMULATIVE market value of all open lots in a ticker, as a fraction of

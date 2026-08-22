@@ -22,7 +22,7 @@ Answers one question: **you have cash to deploy — deploy it today, or wait?**
 What it deliberately does NOT do
 --------------------------------
 No sell signals. No trailing stops. No position-size model. Those were all
-tested and all failed -- see the Evidence tab, or OPTIMISATION_STUDY.md §4.
+tested and all failed -- see the Evidence tab, or docs/03_OPTIMISATION_STUDY.md §4.
 
     streamlit run appV2.py
 """

@@ -11,7 +11,7 @@ be ruled out.
 `rvol20` -- the name's own trailing volatility -- carries the largest
 coefficient in every fit. If the model is mostly learning "put more money in
 the jumpy names," then the improvement is not skill. It is the same finding
-STRATEGY_REVIEW.md §5.5 already documented: returns scale monotonically with
+docs/01_STRATEGY_REVIEW.md §5.5 already documented: returns scale monotonically with
 position size at roughly constant drawdown, because the driver is exposure,
 not signal. Dressing a volatility tilt up as a predictive model would be that
 mistake with extra steps.
@@ -52,7 +52,7 @@ from studies.overreaction_lib import (  # noqa: E402
     add_indicators, attach_earnings, extract_events, load_earnings, load_prices,
 )
 
-RESULTS = ROOT / "studies" / "results_optimisation"
+RESULTS = ROOT / "studies" / "results" / "09_optimisation"
 RESULTS.mkdir(parents=True, exist_ok=True)
 
 WARMUP, START, END = "2014-06-01", "2015-01-01", "2026-08-22"
@@ -178,7 +178,7 @@ def main() -> None:
 
     full = pd.concat(out_rows, ignore_index=True)
     full.to_csv(RESULTS / "3_risk_tilt_control.csv", index=False)
-    print(f"\n  -> studies/results_optimisation/3_risk_tilt_control.csv")
+    print(f"\n  -> studies/results/09_optimisation/3_risk_tilt_control.csv")
 
     banner("VERDICT")
     for horizon in (20, 60):

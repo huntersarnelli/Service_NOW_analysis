@@ -1,6 +1,34 @@
 """
-Tactical Trading System — Live Streamlit Dashboard
-==================================================
+Tactical Trading System — Live Streamlit Dashboard  [OBSOLETE]
+==============================================================
+
+    ####################################################################
+    #  OBSOLETE. Use appV2.py instead:  streamlit run appV2.py         #
+    #                                                                  #
+    #  This app runs Methods A and B, which are built around EXIT      #
+    #  rules. Four studies later, no exit rule has any evidence behind #
+    #  it, and everything that does have evidence is about ENTRY.      #
+    #                                                                  #
+    #  Specifically wrong here, by this repository's own measurements: #
+    #                                                                  #
+    #   - The Dip strategy sizes UP to 35% within 10 days after        #
+    #     earnings. Post-earnings dips are the WORST cohort measured   #
+    #     (-0.06pp at 5d, 47.2% hit rate). This levers into them.      #
+    #     -> docs/02_OVERREACTION_STUDY.md section 4                   #
+    #                                                                  #
+    #   - Method A exits at Z > 0, which costs ~21pp of CAGR.          #
+    #     -> docs/01_STRATEGY_REVIEW.md section 5.25                   #
+    #                                                                  #
+    #   - Both run a 3-10 name tech universe, which is ~2-4            #
+    #     INDEPENDENT BETS. Widening past one sector was worth 21      #
+    #     points of drawdown -- more than every sizing rule combined.  #
+    #     -> docs/04_PORTFOLIO_STUDY.md sections 1 and 5               #
+    #                                                                  #
+    #  KEPT because the Portfolio tab is still the place to record     #
+    #  lots, and appV2.py reads the same store (data/portfolio.py).    #
+    #  The scanner and rules tabs are historical.                      #
+    ####################################################################
+
 Two strategies, one app. Pick the rule set in the sidebar:
 
   Dual-Mode Tactical           Z < -1.5 entry, trail = Close - 2xATR (raise
@@ -13,7 +41,7 @@ Two strategies, one app. Pick the rule set in the sidebar:
 
 Layout
 ------
-app.py                   — entry point, sidebar, strategy tabs
+app.py                   — entry point, sidebar, strategy tabs (this file)
 data/market.py           — batched OHLCV, indicators, live levels / signals
 data/strategies.py       — the two rule sets + open-lot evaluation
 data/portfolio.py        — your lots and where they are stored
@@ -744,8 +772,20 @@ def main():
     store = get_store()
     lots = store.load()
 
+    st.warning(
+        "**This dashboard is obsolete.** Run `streamlit run appV2.py` instead — "
+        "it implements the rules that survived testing. Methods A and B are both "
+        "built around exit rules, and no exit rule in this repository has ever "
+        "survived a control. The Dip strategy's 35% post-earnings sizing is "
+        "actively backwards: post-earnings dips were the worst cohort measured. "
+        "See `docs/DEAD_ENDS.md`.\n\n"
+        "**The Portfolio tab below is still current** — it is where you record "
+        "lots, and appV2.py reads the same store."
+    )
+
     with st.sidebar:
         st.title("⚙️ Settings")
+        st.error("Obsolete — use `appV2.py`")
 
         strategy_key = st.radio(
             "Strategy",

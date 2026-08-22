@@ -4,7 +4,7 @@ Portfolio construction study — should different names be treated differently?
 The question
 ------------
 Everything tested so far has aimed at RETURN and failed: nine interventions in
-OPTIMISATION_STUDY.md §4's graveyard. This study aims at RISK instead, which is
+docs/03_OPTIMISATION_STUDY.md §4's graveyard. This study aims at RISK instead, which is
 a different objective and mostly untested at breadth.
 
 Specifically: the strategy currently gives every name the same 20% of equity
@@ -23,7 +23,7 @@ Four parts:
                      If 30 names are really 3 bets, no sizing rule fixes that,
                      and it should be known before optimising around it.
 
-A warning carried from OPTIMISATION_STUDY.md §3: STRATEGY_REVIEW.md §5.13b
+A warning carried from docs/03_OPTIMISATION_STUDY.md §3: docs/01_STRATEGY_REVIEW.md §5.13b
 found vol-targeting at 5% risk RAISED CAGR to 87.4%, which reads like free
 alpha. It is not -- at 5% risk per lot the rule increases average exposure to
 96%, so it is a leverage tilt, not risk parity. This study sweeps risk_frac
@@ -36,7 +36,7 @@ trade; the question is whether the exchange rate is good.
 
     python studies/run_portfolio_study.py
 
-Writes studies/results_portfolio/.
+Writes studies/results/10_portfolio/.
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ sys.path.insert(0, str(ROOT))
 
 from studies.dip_backtest import BacktestConfig, load_prices, run_backtest  # noqa: E402
 
-RESULTS = ROOT / "studies" / "results_portfolio"
+RESULTS = ROOT / "studies" / "results" / "10_portfolio"
 RESULTS.mkdir(parents=True, exist_ok=True)
 
 END = "2026-08-22"

@@ -4,7 +4,7 @@ run_dip_study.py and run_improvements.py.
 
 Run:  python studies/run_regime_study.py
 
-Results -> studies/results_regime/
+Results -> studies/results/03_regime/
 
 Why this exists
 ---------------
@@ -46,7 +46,7 @@ from studies.dip_backtest import (  # noqa: E402
     sweep,
 )
 
-RESULTS = ROOT / "studies" / "results_regime"
+RESULTS = ROOT / "studies" / "results" / "03_regime"
 RESULTS.mkdir(parents=True, exist_ok=True)
 
 UNIVERSE = ["META", "NVDA", "NET"]
@@ -71,7 +71,7 @@ def show(df, cols=None, n=50):
 
 def save(df, name):
     df.to_csv(RESULTS / f"{name}.csv", index=False)
-    print(f"  -> studies/results_regime/{name}.csv")
+    print(f"  -> studies/results/03_regime/{name}.csv")
 
 
 def row(res, label):
@@ -295,7 +295,7 @@ def main():
     print(f"  Bootstrap 95% CI on excess  : [{lo:+.2f}, {hi:+.2f}] pp")
 
     (RESULTS / "summary.json").write_text(json.dumps(summary, indent=2, default=float), encoding="utf-8")
-    print(f"\n  -> studies/results_regime/summary.json")
+    print(f"\n  -> studies/results/03_regime/summary.json")
     banner("DONE")
     return summary
 

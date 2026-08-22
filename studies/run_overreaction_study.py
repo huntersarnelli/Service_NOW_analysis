@@ -15,7 +15,7 @@ If it does not, classifying causes with a language model is pointless.
 
     python studies/run_overreaction_study.py
 
-Writes studies/results_overreaction/.
+Writes studies/results/08_overreaction/.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ from studies.overreaction_lib import (  # noqa: E402
     extract_events, load_earnings, load_prices, monthly_tstat,
 )
 
-RESULTS = ROOT / "studies" / "results_overreaction"
+RESULTS = ROOT / "studies" / "results" / "08_overreaction"
 RESULTS.mkdir(parents=True, exist_ok=True)
 
 WARMUP = "2014-06-01"   # 120d beta + 20d Z need a run-up

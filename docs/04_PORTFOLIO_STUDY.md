@@ -71,7 +71,7 @@ CAGR.
 
 ### A correction to §5.13b
 
-`STRATEGY_REVIEW.md` §5.13b found vol-targeting at 5% risk *raised* CAGR to
+`01_STRATEGY_REVIEW.md` §5.13b found vol-targeting at 5% risk *raised* CAGR to
 87.4% and read it as the first variant to beat buy-and-hold on Sharpe. The
 exposure column here explains it: at 5% risk per lot the rule pushes average
 exposure to ~96%, so it is **a leverage tilt, not risk parity**. Sweeping
@@ -138,7 +138,7 @@ Two things worth noting:
   vol reduction, not better return per unit of the risk that actually hurts.
 - The highest CAGR anywhere is **tech30 tilt-to-vol at 34.3%**, +3.5pp over flat
   with Sharpe essentially unchanged (1.04 vs 1.03). This is the same effect
-  `OPTIMISATION_STUDY.md` §3 identified: **it is the exposure lever again**,
+  `03_OPTIMISATION_STUDY.md` §3 identified: **it is the exposure lever again**,
   expressed as an allocation tilt rather than as margin. It is leverage without
   a margin account, and it costs 3.1pp of drawdown.
 
@@ -162,7 +162,7 @@ every name is the same bet.
 the negative results in the other studies.**
 
 - The original three-name universe is **2.1 independent bets**, with a single
-  principal component driving **64% of all variance**. `STRATEGY_REVIEW.md`
+  principal component driving **64% of all variance**. `01_STRATEGY_REVIEW.md`
   §7.12 called the concentration risk understated; this quantifies it.
 - Thirty tech names is **4.6 bets**, not thirty. Position sizing across thirty
   names that are really 4.6 bets cannot accomplish much — which is exactly what
@@ -191,7 +191,7 @@ of them combined.
 | Tilt-to-vol tiering | **+3.5pp** | +3.1pp drawdown | Leverage without margin |
 
 If the objective is maximum profit, this study says the same thing
-`STRATEGY_REVIEW.md` §5.19 said: **every risk-reducing rule costs return, at a
+`01_STRATEGY_REVIEW.md` §5.19 said: **every risk-reducing rule costs return, at a
 roughly fixed exchange rate, everywhere on the curve.** The only variant that
 raised CAGR did so by raising volatility.
 

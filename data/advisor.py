@@ -3,7 +3,7 @@ The LLM advisory layer — advisory only, never a gate.
 
 Why this is advisory
 --------------------
-OVERREACTION_STUDY.md §8 sets the honest expectations before a line of this was
+docs/02_OVERREACTION_STUDY.md §8 sets the honest expectations before a line of this was
 written:
 
   FOR   The axis that produced a real, stable effect is exactly the axis a

@@ -5,7 +5,7 @@ Run:  python studies/run_improvements.py
 
 The main study (run_dip_study.py) concluded that the documented edge is mostly
 exposure to three hindsight-selected stocks. This script tests whether anything
-can be done about that. Results land in studies/results_improvements/.
+can be done about that. Results land in studies/results/02_improvements/.
 
 Sections
   A  NULL TEST — does the Z signal beat random entries of the same frequency?
@@ -37,7 +37,7 @@ from studies.dip_backtest import (  # noqa: E402
     series_metrics,
 )
 
-RESULTS = ROOT / "studies" / "results_improvements"
+RESULTS = ROOT / "studies" / "results" / "02_improvements"
 RESULTS.mkdir(parents=True, exist_ok=True)
 
 WARMUP = "2021-09-01"          # 12-1 momentum needs a year before the study starts
@@ -77,7 +77,7 @@ def show(df, cols=None, n=40):
 
 def save(df, name):
     df.to_csv(RESULTS / f"{name}.csv", index=False)
-    print(f"  -> studies/results_improvements/{name}.csv")
+    print(f"  -> studies/results/02_improvements/{name}.csv")
 
 
 def main():
@@ -233,7 +233,7 @@ def main():
     summary["out_of_sample"] = oos.to_dict("records")
 
     (RESULTS / "summary.json").write_text(json.dumps(summary, indent=2, default=float), encoding="utf-8")
-    print(f"\n  -> studies/results_improvements/summary.json")
+    print(f"\n  -> studies/results/02_improvements/summary.json")
     banner("DONE")
     return summary
 

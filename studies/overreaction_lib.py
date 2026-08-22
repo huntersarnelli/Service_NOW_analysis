@@ -3,7 +3,7 @@ Overreaction event study — library.
 
 Question this answers
 ---------------------
-STRATEGY_REVIEW.md establishes that the Z<-1.2 entry beats random (§5.12) but
+docs/01_STRATEGY_REVIEW.md establishes that the Z<-1.2 entry beats random (§5.12) but
 that the *depth* of the dip is irrelevant (§5.4). That leaves an obvious gap:
 Z measures the MAGNITUDE of a move and says nothing about its CAUSE.
 
@@ -167,7 +167,7 @@ def load_earnings(tickers) -> dict[str, pd.DataFrame]:
     Per-ticker earnings dates + EPS surprise, cached to disk.
 
     yfinance returns roughly 12 years of history here, which is deeper than
-    STRATEGY_REVIEW.md §5.32 assumed. Timestamps are dropped to naive dates;
+    docs/01_STRATEGY_REVIEW.md §5.32 assumed. Timestamps are dropped to naive dates;
     an after-close report is attributed to the NEXT trading bar, which is
     when the price actually moves.
     """
@@ -252,7 +252,7 @@ def add_indicators(
     # Everything below is observable on the event bar and is a candidate for
     # the conditional-sizing model in run_optimisation_study.py. Nothing here
     # may depend on the name's own realised performance, which is the
-    # selection-bias trap STRATEGY_REVIEW.md §5.7 documents.
+    # selection-bias trap docs/01_STRATEGY_REVIEW.md §5.7 documents.
     d["rvol20"] = d["ret"].rolling(20).std() * np.sqrt(TRADING_DAYS) * 100
     d["log_dollar_vol"] = np.log(
         (d["Close"] * d["Volume"]).rolling(20).median().clip(lower=1.0)

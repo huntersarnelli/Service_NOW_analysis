@@ -9,7 +9,7 @@
 
 ## 0. Why this study exists
 
-`STRATEGY_REVIEW.md` establishes two things about the `Z < −1.2` entry:
+`01_STRATEGY_REVIEW.md` establishes two things about the `Z < −1.2` entry:
 
 - it beats random entries (§5.12), so dip-buying does something real, and
 - the *depth* of the dip is irrelevant (§5.4) — −1.2σ, −0.8σ and −0.5σ are
@@ -114,7 +114,7 @@ hundred-and-twenty-day excess is beta you would have earned by throwing a dart.
 > days** on a 4×ATR trail. The signal it entered on has stopped paying by then.
 > What B is holding after roughly sixty days is not a dip trade — it is
 > leveraged beta with a stop under it. That is the same conclusion
-> `STRATEGY_REVIEW.md` §5.5 reached from the position-size sweep, arrived at
+> `01_STRATEGY_REVIEW.md` §5.5 reached from the position-size sweep, arrived at
 > from a completely independent direction.
 
 ---
@@ -351,7 +351,7 @@ one thing already known to work.
   cohort levels. The *differences* are beta-free by pairing; the *levels* are
   not, which is precisely what §2 demonstrates.
 - **Earnings dates from yfinance.** Roughly 12 years of history — deeper than
-  `STRATEGY_REVIEW.md` §5.32 assumed — but restatements and timing errors are
+  `01_STRATEGY_REVIEW.md` §5.32 assumed — but restatements and timing errors are
   not audited. After-close reports are assigned to the next trading bar.
 
 ---

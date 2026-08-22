@@ -4,7 +4,7 @@
 
 ---
 
-> ### ⚠️ Independently tested — see [`STRATEGY_REVIEW.md`](STRATEGY_REVIEW.md)
+> ### ⚠️ Independently tested — see [`01_STRATEGY_REVIEW.md`](01_STRATEGY_REVIEW.md)
 >
 > When this document was written, no backtest code existed in the repository, so
 > the performance table in §2 could not be checked. That harness now exists

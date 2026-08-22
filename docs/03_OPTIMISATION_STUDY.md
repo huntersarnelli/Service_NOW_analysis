@@ -19,7 +19,7 @@ out-of-sample or null control, not a grid search.
 | Can lots be sized by a model of predicted edge? | **Only as a volatility tilt.** The model is ~all `rvol20` | §3 |
 | Does predicted edge sort realised edge out of sample? | Yes, weakly — but a single volatility feature does it *better* | §3.3 |
 | Is there conditioning signal left after neutralising volatility? | **Not established.** +0.13 to +0.23pp, t between 0.38 and 1.51 | §3.4 |
-| Should `z_entry` / `atr_mult` be re-optimised? | **No** — already closed by `STRATEGY_REVIEW.md` §5.17 | §1 |
+| Should `z_entry` / `atr_mult` be re-optimised? | **No** — already closed by `01_STRATEGY_REVIEW.md` §5.17 | §1 |
 
 **Net effect on the strategy: nothing changes.** The trail stays, flat sizing
 stays. Two plausible ideas were tested properly and neither survived.
@@ -28,7 +28,7 @@ stays. Two plausible ideas were tested properly and neither survived.
 
 ## 1. The constraint every optimisation attempt has to respect
 
-`STRATEGY_REVIEW.md` §5.17 ran a rolling walk-forward that re-optimised
+`01_STRATEGY_REVIEW.md` §5.17 ran a rolling walk-forward that re-optimised
 `z_entry` and `atr_mult` on in-sample Sharpe. Re-optimising was **11.8pp worse
 than freezing the parameters**, and the fitted values jumped between Z<−0.8 and
 Z<−2.0, and between 2×ATR and 6×ATR, from one adjacent window to the next.
@@ -43,7 +43,7 @@ finding rather than by a search.
 
 ### 2.1 The hypothesis
 
-`OVERREACTION_STUDY.md` §2 measures the entry signal's excess over random
+`02_OVERREACTION_STUDY.md` §2 measures the entry signal's excess over random
 entries as **+0.16 / +0.34 / +0.40 / −0.00 pp** at 5 / 20 / 60 / 120 bars. The
 signal expires.
 
@@ -95,7 +95,7 @@ After the dip edge decays, what remains is beta — and beta on this universe wa
 strongly positive. Exiting on a clock converts an asset with positive expected
 return into cash with none. The exposure column shows the mechanism directly:
 average exposure falls from **96–99% to 44–66%** at short holds, and
-`STRATEGY_REVIEW.md` §5.5 already established that returns on this system scale
+`01_STRATEGY_REVIEW.md` §5.5 already established that returns on this system scale
 monotonically with exposure.
 
 So the trail is not doing what it was assumed to be doing. **The trail's job is
@@ -109,7 +109,7 @@ fails here. Both interventions do the same thing: reduce time in the market.
 
 ### 3.1 The hypothesis
 
-Every lot is currently a flat 20% of equity. `OVERREACTION_STUDY.md` §7 showed
+Every lot is currently a flat 20% of equity. `02_OVERREACTION_STUDY.md` §7 showed
 that *filtering* on the event tags destroys the sample — the triple screen cut
 17,235 events to 786 and lost significance entirely.
 
@@ -180,7 +180,7 @@ And the tilt is large. The book the model builds, versus equal weight:
 
 ### 3.4 Verdict
 
-**This is `STRATEGY_REVIEW.md` §5.5 again, wearing a regression.** That section
+**This is `01_STRATEGY_REVIEW.md` §5.5 again, wearing a regression.** That section
 established that returns on this system scale monotonically with position size
 at roughly constant drawdown, because the driver is exposure rather than signal.
 A "predicted edge" model whose dominant term is trailing volatility, producing a
@@ -222,11 +222,11 @@ being *cleverer about when to be in* has now failed —
 The three things that *did* survive testing, in order of how well evidenced
 they are:
 
-1. **Dip-timing new money** — never selling. `STRATEGY_REVIEW.md` §5.22.
+1. **Dip-timing new money** — never selling. `01_STRATEGY_REVIEW.md` §5.22.
 2. **The entry signal itself** — beats 200/200 random draws, worth
-   +0.3 to +0.4pp per trade, dead by 120 bars. `OVERREACTION_STUDY.md` §2.
+   +0.3 to +0.4pp per trade, dead by 120 bars. `02_OVERREACTION_STUDY.md` §2.
 3. **Excluding dips within 20 days of earnings** — +0.80pp at 20 days,
-   t = 2.35, stable across both halves. `OVERREACTION_STUDY.md` §4.
+   t = 2.35, stable across both halves. `02_OVERREACTION_STUDY.md` §4.
 
 All three are about **entry**. Nothing about exits, sizing, or filtering has
 ever improved this system in a way that survived a control.

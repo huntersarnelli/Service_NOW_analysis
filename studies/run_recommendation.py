@@ -1,7 +1,7 @@
 """
 Window sensitivity and a concrete recommendation.
 
-Run:  python studies/run_recommendation.py     -> studies/results_recommendation/
+Run:  python studies/run_recommendation.py     -> studies/results/04_recommendation/
 
 Context
 -------
@@ -48,7 +48,7 @@ from studies.dip_backtest import (  # noqa: E402
     series_metrics,
 )
 
-RESULTS = ROOT / "studies" / "results_recommendation"
+RESULTS = ROOT / "studies" / "results" / "04_recommendation"
 RESULTS.mkdir(parents=True, exist_ok=True)
 
 TRIO = ["META", "NVDA", "NET"]
@@ -82,7 +82,7 @@ def show(df, cols=None, n=50):
 
 def save(df, name):
     df.to_csv(RESULTS / f"{name}.csv", index=False)
-    print(f"  -> studies/results_recommendation/{name}.csv")
+    print(f"  -> studies/results/04_recommendation/{name}.csv")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -315,7 +315,7 @@ def main():
     summary["best"] = best.to_dict()
 
     (RESULTS / "summary.json").write_text(json.dumps(summary, indent=2, default=float), encoding="utf-8")
-    print(f"\n  -> studies/results_recommendation/summary.json")
+    print(f"\n  -> studies/results/04_recommendation/summary.json")
     banner("DONE")
     return summary
 

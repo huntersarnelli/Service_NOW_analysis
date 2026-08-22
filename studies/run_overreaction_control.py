@@ -6,7 +6,7 @@ universe of high-beta names in a period when high-beta tech beat SPY, that
 level is contaminated: holding any of these names on any random day beat SPY,
 so a positive excess after a dip proves nothing on its own.
 
-This is the control STRATEGY_REVIEW.md §5.12 ran for the 3-name study, applied
+This is the control docs/01_STRATEGY_REVIEW.md §5.12 ran for the 3-name study, applied
 here: draw random dates on the SAME names at the SAME frequency, measure the
 same forward excess, and ask whether the dip dates beat the random dates.
 
@@ -34,7 +34,7 @@ from studies.overreaction_lib import (  # noqa: E402
     load_prices, monthly_tstat,
 )
 
-RESULTS = ROOT / "studies" / "results_overreaction"
+RESULTS = ROOT / "studies" / "results" / "08_overreaction"
 RESULTS.mkdir(parents=True, exist_ok=True)
 
 WARMUP, START, END = "2014-06-01", "2015-01-01", "2026-08-22"
@@ -129,7 +129,7 @@ def main() -> None:
     out = pd.DataFrame(rows)
     show(out)
     out.to_csv(RESULTS / "10_null_control.csv", index=False)
-    print(f"  -> studies/results_overreaction/10_null_control.csv")
+    print(f"  -> studies/results/08_overreaction/10_null_control.csv")
 
     banner("2. READING")
     for r in rows:

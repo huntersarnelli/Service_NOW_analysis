@@ -1,7 +1,7 @@
 """
 Strategy A vs Strategy B — head to head, on equal terms.
 
-Run:  python studies/run_a_vs_b.py   -> studies/results_a_vs_b/
+Run:  python studies/run_a_vs_b.py   -> studies/results/06_a_vs_b/
 
 Why this exists
 ---------------
@@ -49,7 +49,7 @@ from studies.dip_backtest import (  # noqa: E402
     BacktestConfig, buy_and_hold, load_prices, run_backtest, series_metrics,
 )
 
-RESULTS = ROOT / "studies" / "results_a_vs_b"
+RESULTS = ROOT / "studies" / "results" / "06_a_vs_b"
 RESULTS.mkdir(parents=True, exist_ok=True)
 
 TRIO = ["META", "NVDA", "NET"]
@@ -91,7 +91,7 @@ def show(df, cols=None, n=60):
 
 def save(df, name):
     df.to_csv(RESULTS / f"{name}.csv", index=False)
-    print(f"  -> studies/results_a_vs_b/{name}.csv")
+    print(f"  -> studies/results/06_a_vs_b/{name}.csv")
 
 
 def main():
@@ -285,7 +285,7 @@ def main():
               f"B&H {sub.loc['Buy & hold','sharpe']:.2f}")
 
     (RESULTS / "summary.json").write_text(json.dumps(summary, indent=2, default=float), encoding="utf-8")
-    print("\n  -> studies/results_a_vs_b/summary.json")
+    print("\n  -> studies/results/06_a_vs_b/summary.json")
     banner("DONE")
     return summary
 
