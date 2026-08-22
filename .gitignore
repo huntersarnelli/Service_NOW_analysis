@@ -29,3 +29,141 @@ dist/
 .env
 .env.*
 .streamlit/secrets.toml
+
+# Portfolio positions (personal data — never commit)
+portfolio_data/
+
+
+
+
+# Data files - keep only code in the repo
+*.csv
+*.tsv
+*.parquet
+*.pq
+*.feather
+*.ftr
+*.arrow
+*.orc
+*.avro
+*.jsonl
+*.ndjson
+
+# Spreadsheets
+*.xlsx
+*.xls
+*.xlsm
+*.ods
+
+# Binary / serialized data
+*.pickle
+*.pkl
+*.joblib
+*.npy
+*.npz
+*.h5
+*.hdf5
+*.db
+*.sqlite
+*.sqlite3
+
+# Compressed data
+*.gz
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# Large / intermediate data directories (uncomment or adjust as needed)
+# data/
+# datasets/
+# raw/
+# processed/
+# intermediate/
+# output/
+# results/
+# artifacts/
+# models/
+# checkpoints/
+# logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE / editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Testing / coverage
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
+
+# mypy / type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Secrets / local config (keep example files)
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+*.pem
+*.key
+*.json

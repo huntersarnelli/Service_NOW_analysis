@@ -1,7 +1,7 @@
 """
 Market data, indicators, and live strategy levels.
 
-Extracted from the Streamlit app so the same logic can be reused in notebooks:
+Shared by both strategies (see data/strategies.py) and reusable in notebooks:
 
     from data.market import get_data, compute_indicators, get_levels, scan_bucket
 
@@ -28,11 +28,52 @@ MOMENTUM_BUCKET = ["NVDA", "META", "NET"]
 QUALITY_BUCKET = ["NOW", "MSFT", "GOOGL", "PANW", "CRWD", "DDOG", "CRM"]
 ALL_TICKERS = MOMENTUM_BUCKET + QUALITY_BUCKET
 
+# Aggressive Dip universe (was hard-coded in aggressive_dip_dashboard.py)
+DIP_BUCKET = ["META", "NVDA", "NET", "DDOG"]
+
+# Every symbol either strategy can ask for.
+UNIVERSE = list(dict.fromkeys(ALL_TICKERS + DIP_BUCKET))
+
+_OHLCV = ["Open", "High", "Low", "Close", "Volume"]
+
+
+def required_history_days(
+    sma_window: int,
+    atr_window: int,
+    trend_sma: int,
+    extra_bars: int = 40,
+) -> int:
+    """
+    Calendar days needed to guarantee `max(window) + extra_bars` *trading* bars.
+
+    The old code fetched a flat 180 calendar days (~124 trading bars) while the
+    sidebar allowed a 200-bar trend SMA, so every ticker silently returned None
+    and the dashboard went blank. Always size the request to the widest window.
+    """
+    need_bars = max(int(sma_window), int(atr_window), int(trend_sma)) + int(extra_bars)
+    calendar = int(need_bars * 1.6) + 30  # trading days -> calendar days, + slack
+    return max(HISTORY_DAYS, calendar)
+
+
+def _clean(df: Optional[pd.DataFrame]) -> Optional[pd.DataFrame]:
+    if df is None or df.empty:
+        return None
+    cols = [c for c in _OHLCV if c in df.columns]
+    if "Close" not in cols:
+        return None
+    out = df[cols].dropna(subset=["Close"]).copy()
+    if out.empty:
+        return None
+    out.index = pd.to_datetime(out.index)
+    if getattr(out.index, "tz", None) is not None:
+        out.index = out.index.tz_localize(None)
+    return out
+
 
 def get_data(ticker: str, days: int = HISTORY_DAYS) -> Optional[pd.DataFrame]:
     """Download OHLCV history for a single ticker via yfinance."""
     end = datetime.now().date() + timedelta(days=1)
-    start = end - timedelta(days=days)
+    start = end - timedelta(days=int(days))
     try:
         df = yf.download(
             ticker,
@@ -42,12 +83,55 @@ def get_data(ticker: str, days: int = HISTORY_DAYS) -> Optional[pd.DataFrame]:
             progress=False,
             auto_adjust=True,
         )
-        if df is None or df.empty:
-            return None
-        cols = [c for c in ["Open", "High", "Low", "Close", "Volume"] if c in df.columns]
-        return df[cols].dropna().copy()
+        return _clean(df)
     except Exception:
         return None
+
+
+def get_data_batch(
+    tickers: list[str],
+    days: int = HISTORY_DAYS,
+) -> dict[str, pd.DataFrame]:
+    """
+    Download every ticker in ONE yfinance request.
+
+    The old scan issued a separate download per symbol (10 sequential round
+    trips). Batching is ~10x fewer requests, which also matters a great deal
+    when running from a datacenter IP where Yahoo throttles hard.
+    """
+    tickers = [t for t in dict.fromkeys(tickers) if t]
+    if not tickers:
+        return {}
+
+    end = datetime.now().date() + timedelta(days=1)
+    start = end - timedelta(days=int(days))
+    try:
+        raw = yf.download(
+            tickers,
+            start=start.strftime("%Y-%m-%d"),
+            end=end.strftime("%Y-%m-%d"),
+            group_by="ticker",
+            auto_adjust=True,
+            threads=True,
+            progress=False,
+        )
+    except Exception:
+        return {}
+
+    if raw is None or raw.empty:
+        return {}
+
+    out: dict[str, pd.DataFrame] = {}
+    multi = isinstance(raw.columns, pd.MultiIndex)
+    for t in tickers:
+        try:
+            frame = raw[t] if multi else raw
+        except KeyError:
+            continue
+        cleaned = _clean(frame)
+        if cleaned is not None:
+            out[t] = cleaned
+    return out
 
 
 def compute_indicators(
@@ -75,8 +159,9 @@ def compute_indicators(
     return out
 
 
-def get_levels(
+def levels_from_frame(
     ticker: str,
+    df: pd.DataFrame,
     use_filter: bool,
     z_entry: float,
     atr_mult: float,
@@ -85,7 +170,7 @@ def get_levels(
     trend_sma: int,
 ) -> Optional[dict]:
     """
-    Compute live levels and signal for one ticker.
+    Compute live levels and signal from an already-downloaded OHLCV frame.
 
     Exact strategy logic:
       buy_trigger = SMA + z_entry * std
@@ -97,11 +182,8 @@ def get_levels(
     When use_filter is False (the default), trend_ok is always True and
     the N-SMA is still computed for display / comparison only.
     """
-    # Always compute a positive-length trend SMA for charts/tables, even when
-    # the filter is off. Filter application is controlled only by use_filter.
     trend_sma_len = max(int(trend_sma), 1)
     min_bars = max(60, sma_window + 5, atr_window + 5, trend_sma_len + 5)
-    df = get_data(ticker)
     if df is None or len(df) < min_bars:
         return None
 
@@ -125,7 +207,6 @@ def get_levels(
     mean_exit = sma
     trail_now = close - (atr_mult * atr)
 
-    # Default strategy: no trend gate. Filter only when use_filter is True.
     trend_ok = True
     if use_filter and not np.isnan(trend_sma_val):
         trend_ok = close > trend_sma_val
@@ -137,7 +218,6 @@ def get_levels(
     reward = mean_exit - buy_trigger
     rr = (reward / risk) if risk > 0 else float("nan")
 
-    # Proximity tiers for UI
     if signal:
         status = "BUY"
     elif dist_pct < 5:
@@ -169,8 +249,28 @@ def get_levels(
         "risk": risk,
         "reward": reward,
         "rr": rr,
+        "last_bar_date": df.index[-1],
         "history": df,
     }
+
+
+def get_levels(
+    ticker: str,
+    use_filter: bool,
+    z_entry: float,
+    atr_mult: float,
+    sma_window: int,
+    atr_window: int,
+    trend_sma: int,
+) -> Optional[dict]:
+    """Download + compute live levels for one ticker (single-symbol path)."""
+    days = required_history_days(sma_window, atr_window, trend_sma)
+    df = get_data(ticker, days=days)
+    if df is None:
+        return None
+    return levels_from_frame(
+        ticker, df, use_filter, z_entry, atr_mult, sma_window, atr_window, trend_sma
+    )
 
 
 def scan_bucket(
@@ -182,14 +282,52 @@ def scan_bucket(
     atr_window: int,
     trend_sma: int,
     bucket_name: str,
+    frames: Optional[dict[str, pd.DataFrame]] = None,
 ) -> list[dict]:
-    """Scan a list of tickers and attach a bucket label to each result."""
+    """
+    Scan a list of tickers and attach a bucket label to each result.
+
+    Pass `frames` (from get_data_batch) to avoid one download per ticker.
+    """
     rows = []
     for t in tickers:
-        info = get_levels(
-            t, use_filter, z_entry, atr_mult, sma_window, atr_window, trend_sma
-        )
+        if frames is not None:
+            df = frames.get(t)
+            info = (
+                levels_from_frame(
+                    t, df, use_filter, z_entry, atr_mult,
+                    sma_window, atr_window, trend_sma,
+                )
+                if df is not None
+                else None
+            )
+        else:
+            info = get_levels(
+                t, use_filter, z_entry, atr_mult, sma_window, atr_window, trend_sma
+            )
         if info:
+            info = dict(info)
             info["bucket"] = bucket_name
             rows.append(info)
     return rows
+
+
+def get_earnings_dates(ticker: str, limit: int = 16) -> list:
+    """Past + upcoming earnings dates (used by the Aggressive Dip sizing rule)."""
+    try:
+        ed = yf.Ticker(ticker).get_earnings_dates(limit=limit)
+        if ed is None or len(ed) == 0:
+            return []
+        dates = []
+        for idx in ed.index:
+            ts = pd.Timestamp(idx)
+            if ts.tz is not None:
+                ts = ts.tz_localize(None)
+            dates.append(ts.normalize())
+        return sorted(set(dates))
+    except Exception:
+        return []
+
+
+def get_earnings_batch(tickers: list[str], limit: int = 16) -> dict[str, list]:
+    return {t: get_earnings_dates(t, limit=limit) for t in tickers}

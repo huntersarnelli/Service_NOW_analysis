@@ -1,8 +1,14 @@
-streamlit>=1.32.0
-yfinance>=0.2.36
-pandas>=2.0.0
-numpy>=1.24.0
-plotly>=5.18.0
-lxml>=4.9.0
+# Pinned to the versions this app is tested against. Streamlit Community Cloud
+# resolves these fresh on every deploy, so unpinned ranges let a breaking
+# upstream release take the app down without a commit on your side.
+streamlit>=1.59,<2.0      # st.context.theme, st.fragment(run_every=), width="stretch"
+                          # (pinned to the version this was tested against; the
+                          #  deprecated use_container_width= has been migrated out)
+yfinance>=0.2.60,<1.0     # breaks often; re-test before widening
+pandas>=2.1,<3.0          # Styler.map (was applymap before 2.1)
+numpy>=1.24,<3.0
+plotly>=5.18,<7.0
+lxml>=4.9
+
 # Optional: Alpha Vantage NEWS_SENTIMENT uses stdlib urllib only (no extra package).
-# Set ALPHA_VANTAGE_API_KEY env var or paste key in the sidebar for live media.
+# Set ALPHA_VANTAGE_API_KEY env var or put it in .streamlit/secrets.toml.

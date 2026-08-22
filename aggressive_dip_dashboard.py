@@ -1,10 +1,26 @@
 """
-Aggressive Dip Accumulation — Live Streamlit Dashboard
-======================================================
-Universe : META, NVDA, NET, DDOG   (performance-maximizing set)
+Aggressive Dip Accumulation — Live Streamlit Dashboard  [SUPERSEDED]
+====================================================================
+This standalone dashboard has been folded into `app.py`. Run that instead:
+
+    streamlit run app.py        # then pick "Aggressive Dip Accumulation"
+
+Kept here only for reference. Two known problems it still has:
+
+  1. `find_assumed_entry` GUESSES your open position from the most recent
+     Z < -1.2 signal cluster and compares only TODAY's close to the trail. It
+     never checks whether the stop was breached on an intermediate bar, so a
+     lot that stopped out months ago can still display as HOLD, and a stale
+     SELL banner can persist indefinitely. The Portfolio tab in app.py fixes
+     this by using the entry you actually type in.
+  2. The "Risk" figure uses `close - 4*ATR_today`, but the real exit is
+     `highest_close_since_entry - 4*ATR_at_entry` — two different numbers
+     presented as the same thing.
+
+Universe : META, NVDA, NET, DDOG
 Entry    : 20-period Z-score < -1.2
 Sizing   : 25% of equity (normal) / 35% post-earnings
-Exit     : Highest close since assumed entry − 4.0 × ATR (frozen at entry)
+Exit     : Highest close since assumed entry - 4.0 x ATR (frozen at entry)
 """
 
 from __future__ import annotations
@@ -457,6 +473,13 @@ def main():
         st.markdown("`META · NVDA · NET · DDOG`")
         st.caption(f"Z < {z_entry} · {atr_mult}×ATR · {normal_alloc*100:.0f}% / {post_alloc*100:.0f}%")
 
+    st.warning(
+        "**This dashboard is superseded.** Run `streamlit run app.py` and pick "
+        "*Aggressive Dip Accumulation* in the sidebar — same rules, plus a "
+        "Portfolio tab that uses your real entries instead of guessing them. "
+        "The HOLD/SELL status below is inferred from the last signal cluster "
+        "and does not check whether the stop was already hit."
+    )
     st.title("Aggressive Dip Accumulation")
     st.markdown(
         f"<span class='subtle'>META · NVDA · NET · DDOG · Z < {z_entry} · {atr_mult}× ATR · "

@@ -4,6 +4,46 @@
 
 ---
 
+> ### ⚠️ Independently tested — see [`STRATEGY_REVIEW.md`](STRATEGY_REVIEW.md)
+>
+> When this document was written, no backtest code existed in the repository, so
+> the performance table in §2 could not be checked. That harness now exists
+> (`studies/dip_backtest.py`) and the study has been run.
+>
+> **The numbers below substantially reproduce** — $870,078 vs the $931,543 claimed,
+> with max drawdown (−31.3% vs −31.1%) and average exposure (95.9% vs 95.4%)
+> matching almost exactly. The document is honest.
+>
+> **The conclusions drawn from them do not hold up.** Against buy-and-hold of the
+> same three names the edge is +3.0pp CAGR with a *lower* Sharpe (1.707 vs 1.753,
+> the reverse of the §2 table). Run on 29 large caps instead of these three, the
+> rules beat buy-and-hold on only 10 and the median excess CAGR is −2.2pp. Out of
+> sample (2025-26) buy-and-hold wins on both return and Sharpe. Returns scale
+> monotonically with position size at constant drawdown, which points at exposure
+> rather than signal.
+>
+> Two specific claims below are contradicted by the study:
+> - §3.5 step 6 ("loosening to −1.0 / −0.8 reduced performance") — reproduced,
+>   −1.0, −0.8 and −0.5 all perform within noise of −1.2.
+> - §7's recommended 200-SMA regime filter — cuts CAGR from 83.3% to 24.0% and
+>   does not reduce drawdown.
+>
+> **The window is the deepest problem.** The research period below begins
+> 3 January 2023 — the first trading week after META fell 64.5%, NET 64.2% and
+> NVDA 51.4% over calendar 2022. All three names have data back to September 2019,
+> so the bear market was testable and was not tested. Running the identical rules
+> from 2020 turns the +3.0pp edge over buy-and-hold into **−6.7pp**, with the
+> strategy beating buy-and-hold in only 3 of 7 calendar years.
+>
+> **What it does deserve credit for:** 2022 is its best result anywhere. The 4×ATR
+> trail cushioned a −60.0% year to −49.7% and cut full-history max drawdown from
+> −74.5% to −66.8%. That is a real, repeatable property. It just costs 6.7 points
+> of annual return to obtain, and shows no Sharpe or Calmar improvement.
+>
+> Read the review before acting on anything in this document.
+
+---
+
 ## 1. Strategy Overview
 
 This is a concentrated, long-only, volatility-aware trend-following system that uses short-term mean-reversion signals purely as **entry and add triggers**.  

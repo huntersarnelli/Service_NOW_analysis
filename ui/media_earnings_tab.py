@@ -40,6 +40,21 @@ def _cached_detail(ticker: str, api_key: str) -> dict:
     return get_ticker_media_earnings(ticker, api_key=api_key or None)
 
 
+def _is_dark() -> bool:
+    """Viewer's actual theme. st.get_option only reads the config file."""
+    try:
+        return str(st.context.theme.type).lower() == "dark"
+    except Exception:
+        try:
+            return st.get_option("theme.base") == "dark"
+        except Exception:
+            return False
+
+
+def _template() -> str:
+    return "plotly_dark" if _is_dark() else "plotly_white"
+
+
 def clear_media_earnings_cache() -> None:
     """Clear Streamlit caches for media/earnings loaders (used by Refresh)."""
     _cached_summary.clear()
@@ -235,7 +250,7 @@ def _sentiment_trend_chart(daily: pd.Series, ticker: str) -> go.Figure:
         fig.add_hline(y=-0.15, line_dash="dot", line_color="#dc2626", annotation_text="Bad")
         fig.add_hline(y=0, line_dash="dash", line_color="#64748b")
 
-    template = "plotly_dark" if st.get_option("theme.base") == "dark" else "plotly_white"
+    template = _template()
     fig.update_layout(
         title=f"{ticker} — Media sentiment (daily avg)",
         height=320,
@@ -283,7 +298,7 @@ def _earnings_surprise_chart(history: pd.DataFrame, ticker: str) -> go.Figure:
         )
         fig.add_hline(y=0, line_color="#64748b", line_width=1)
 
-    template = "plotly_dark" if st.get_option("theme.base") == "dark" else "plotly_white"
+    template = _template()
     fig.update_layout(
         title=f"{ticker} — Earnings surprise history",
         height=320,
@@ -382,7 +397,7 @@ def render_media_earnings_tab(
     ]
     st.dataframe(
         _style_summary(summary[show_cols]),
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         height=min(52 + 38 * len(summary), 480),
     )
@@ -461,13 +476,13 @@ def _render_detail(detail: dict):
     with ch1:
         st.plotly_chart(
             _sentiment_trend_chart(detail.get("sentiment_daily"), ticker),
-            use_container_width=True,
+            width="stretch",
             key=f"me_sent_{ticker}",
         )
     with ch2:
         st.plotly_chart(
             _earnings_surprise_chart(detail.get("earnings_history"), ticker),
-            use_container_width=True,
+            width="stretch",
             key=f"me_earn_{ticker}",
         )
 
@@ -516,7 +531,7 @@ def _render_detail(detail: dict):
     else:
         st.dataframe(
             _style_earnings_history(hist),
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
         st.caption(
