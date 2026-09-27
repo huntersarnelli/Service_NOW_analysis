@@ -88,6 +88,36 @@ check("quiet day says so", quiet["quiet"] and "Nothing needs you today" in brief
 text = brief_text(brief, "Mon Sep 28, 08:40 AM ET")
 check("telegram text lists every item", all(i["title"] in text for i in brief["items"]))
 
+# ── ⭐ Want to buy ────────────────────────────────────────────
+from data.brief import brief_title, watch_line, watch_rows  # noqa: E402
+from data.watchlists import WANT_TO_BUY, toggle_want_to_buy  # noqa: E402
+
+watch_result = SimpleNamespace(breadth=0.25, rows=[
+    row("AMZN", dist_pct=-1.5, close=185.0, trigger=182.2),                           # close to its dip price
+    row("GOOGL", dist_pct=-8.0, close=170.0, trigger=156.4),                          # far away
+    row("MSFT", gate_dip=True, qualifies=True, dist_pct=1.0, close=400.0, trigger=404.0),   # crossed, buy zone
+    row("TSLA", gate_dip=True, gate_market_wide=False, dist_pct=2.0, close=200.0, trigger=204.0),  # crossed, own news
+])
+wgroups = {WANT_TO_BUY: ["GOOGL", "AMZN", "MSFT", "TSLA"]}
+w = watch_rows(watch_result, wgroups)
+check("watch list: crossed first (deepest first), then close, then far",
+      [x["ticker"] for x in w] == ["TSLA", "MSFT", "AMZN", "GOOGL"], str([x["ticker"] for x in w]))
+check("close-to-dip line is flagged 👀", watch_line(w[2]).startswith("👀 AMZN") and "-1.5% away" in watch_line(w[2]))
+wb = build_brief(watch_result, wgroups, [], pd.DataFrame(), [])
+targets = [i for i in wb["items"] if i["kind"] == "target"]
+by_ticker = {i["ticker"]: i for i in targets}
+check("🎯 card for each crossed want-to-buy stock", set(by_ticker) == {"MSFT", "TSLA"})
+check("🎯 card says buy zone vs your call", "🟢 buy zone" in by_ticker["MSFT"]["detail"]
+      and "🟠 your call" in by_ticker["TSLA"]["detail"])
+check("no duplicate 🟠 card for a crossed want-to-buy stock", not any(i["kind"] == "your_call" and i["ticker"] == "TSLA"
+                                                                     for i in wb["items"]))
+check("telegram text includes the want-to-buy list", "⭐ Want to buy:" in brief_text(wb, "Mon") and "AMZN" in brief_text(wb, "Mon"))
+check("titles follow the time of day", brief_title("pre-market", 8) == "☀️ Morning brief"
+      and brief_title("market open", 15) == "🕒 Afternoon brief" and brief_title("after hours", 18) == "🌙 Evening brief")
+toggled = toggle_want_to_buy({WANT_TO_BUY: ["AMZN"]}, "NVDA")
+check("⭐ adds, and ⭐ again removes", toggled[WANT_TO_BUY] == ["AMZN", "NVDA"]
+      and toggle_want_to_buy(toggled, "NVDA")[WANT_TO_BUY] == ["AMZN"])
+
 print()
 print("ALL CHECKS PASSED" if not fails else f"{len(fails)} FAILED: {fails}")
 sys.exit(1 if fails else 0)

@@ -20,8 +20,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WATCHLIST_PATH = REPO_ROOT / "portfolio_data" / "watchlists.json"
 
-# Starter groups. Edit them in the app's Watchlists tab.
+WANT_TO_BUY = "⭐ Want to buy"  # the short list the brief tracks against each stock's dip price
+
+# Starter groups. Edit them in the app (Stocks tab → Edit watchlists, or ⭐ on any stock).
 DEFAULT_WATCHLISTS: dict[str, list[str]] = {
+    WANT_TO_BUY: ["AMZN"],
     "Mag 7": ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA"],
     "AI software": ["NOW", "CRM", "ORCL", "SNOW", "DDOG", "MDB", "PLTR", "PANW", "CRWD", "ADBE"],
     "AI hardware & chips": ["AVGO", "AMD", "MU", "ANET", "MRVL", "AMAT", "LRCX", "KLAC"],
@@ -95,3 +98,18 @@ def all_watchlist_tickers(groups: dict[str, list[str]]) -> list[str]:
 def groups_for_ticker(groups: dict[str, list[str]], ticker: str) -> list[str]:
     """Names of the watchlists that contain this ticker."""
     return [name for name, tickers in groups.items() if ticker in tickers]
+
+
+def want_to_buy(groups: dict[str, list[str]]) -> list[str]:
+    return list(groups.get(WANT_TO_BUY, []))
+
+
+def toggle_want_to_buy(groups: dict[str, list[str]], ticker: str) -> dict[str, list[str]]:
+    """Add the ticker to ⭐ Want to buy, or remove it if it is already there."""
+    updated = {name: list(tickers) for name, tickers in groups.items()}
+    current = updated.setdefault(WANT_TO_BUY, [])
+    if ticker in current:
+        current.remove(ticker)
+    else:
+        current.append(ticker)
+    return updated

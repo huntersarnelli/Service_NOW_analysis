@@ -16,7 +16,8 @@ from data.news import get_headlines
 from data.screen import add_screen_indicators
 from data.signals import (BASE_RATE, BUY_ZONE, NEAR, STATUS_LABEL, YOUR_CALL, cause, classify,
                           move_vs_market, reasons, short_reason)
-from data.watchlists import DEFAULT_WATCHLISTS, clean_ticker_list, groups_for_ticker, save_watchlists
+from data.watchlists import (DEFAULT_WATCHLISTS, WANT_TO_BUY, clean_ticker_list, groups_for_ticker,
+                             save_watchlists, toggle_want_to_buy)
 from ui.desk_common import AMBER, GREEN, GREY, fmt_money, section, verdict_card
 
 STATUS_COLOUR = {BUY_ZONE: GREEN, YOUR_CALL: AMBER, NEAR: GREY, "": GREY}
@@ -90,6 +91,10 @@ def render_stocks(result, spec, groups, holdings, frames, benchmark, av_key) -> 
 
         pick = st.selectbox("Open a stock", shown["Stock"].tolist())
         row = next(r for r in result.rows if r["ticker"] == pick)
+        starred = pick in groups.get(WANT_TO_BUY, [])
+        if st.button(("★ Remove from Want to buy" if starred else "⭐ Add to Want to buy"), key=f"star_{pick}"):
+            save_watchlists(toggle_want_to_buy(groups, pick))
+            st.rerun()
         render_detail(row, result, spec, frames, benchmark, av_key)
 
     render_watchlist_editor(groups)

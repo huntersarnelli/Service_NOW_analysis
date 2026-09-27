@@ -10,14 +10,14 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from data.brief import brief_text, build_brief
+from data.brief import brief_text, build_brief, watch_line
 from data.insider_feed import scan as insider_scan
 from data.paper_trades import add_signals, load_trades
 from data.screen import SECTORS
 from ui.desk_common import fmt_money
 from ui.desk_portfolio import portfolio_snapshot
 
-CARD_COLOUR = {"insider": "#1F4E8C", "gap": "#8C2F39", "your_call": "#8A6014",
+CARD_COLOUR = {"insider": "#1F4E8C", "target": "#6A1B9A", "gap": "#8C2F39", "your_call": "#8A6014",
                "buy_zone": "#1F6F54", "earnings": "#64757B"}
 
 BRIEF_CSS = """
@@ -31,6 +31,7 @@ BRIEF_CSS = """
   .brief-title { font-size: 1.05rem; font-weight: 650; line-height: 1.3; }
   .brief-detail { font-size: 0.88rem; opacity: 0.8; margin-top: 0.2rem; line-height: 1.4; }
   .brief-quiet { text-align: center; padding: 1.4rem 0.6rem; opacity: 0.75; }
+  .watch-line { font-size: 0.92rem; padding: 0.25rem 0; border-bottom: 1px solid rgba(128,128,128,0.15); }
 </style>
 """
 
@@ -53,14 +54,14 @@ def render_brief(result, qualifying, cash, max_names, groups, holdings, frames, 
     # so the brief fills the screen there.
     _, centre, _ = st.columns([1, 2.2, 1])
     with centre:
-        st.markdown(f"<div class='brief-head'>☀️ Morning brief</div><div class='brief-sub'>{as_of}</div>",
+        st.markdown(f"<div class='brief-head'>{brief['title']}</div><div class='brief-sub'>{as_of}</div>",
                     unsafe_allow_html=True)
         if brief["market"]:
             st.markdown("".join(f"<span class='chip'>{m}</span>" for m in brief["market"]),
                         unsafe_allow_html=True)
 
         if brief["quiet"]:
-            st.markdown("<div class='brief-card brief-quiet' style='--c:#64757B'>✅ Nothing needs you today."
+            st.markdown("<div class='brief-card brief-quiet' style='--c:#64757B'>✅ Nothing needs you right now."
                         "<br>No buy-zone stocks, no insider buys, no big moves in your stocks.</div>",
                         unsafe_allow_html=True)
         for item in brief["items"]:
@@ -70,8 +71,14 @@ def render_brief(result, qualifying, cash, max_names, groups, holdings, frames, 
                 f"<div class='brief-detail'>{item['detail']}</div></div>",
                 unsafe_allow_html=True,
             )
+        if brief["watch"]:
+            st.markdown("**⭐ Want to buy**, distance to each dip price")
+            st.markdown("".join(f"<div class='watch-line'>{watch_line(w)}</div>" for w in brief["watch"]),
+                        unsafe_allow_html=True)
+            st.caption("Dips are judged on the close: a stock below its dip price at 3:30pm triggers only "
+                       "if it's still there at 4pm. Add or remove stocks with ⭐ in the Stocks tab.")
         st.caption("🟢 tested rule · ⚡ tested in tech, paper only · 🟠 your judgement, logged · "
-                   "🔻🔺📅 information. Open a stock in **Stocks** for its chart and headlines.")
+                   "🎯🔻🔺📅 information. Open a stock in **Stocks** for its chart and headlines.")
 
         render_your_stocks_now(groups, holdings, premarket)
         if qualifying:
