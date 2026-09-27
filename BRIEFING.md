@@ -286,9 +286,11 @@ docs/    01_STRATEGY_REVIEW · 02_OVERREACTION_STUDY · 03_OPTIMISATION_STUDY
          04_PORTFOLIO_STUDY · DEAD_ENDS · legacy_*
 data/    screen.py (the live rules) · advisor.py (LLM) · market · portfolio
          strategies (A/B) · media_earnings (informational only)
+         holdings · watchlists · market_pulse (Deployment Desk v3, Build 1)
+ui/      desk_*.py — appV2 Today / Watchlists / Market pulse / Portfolio tabs
 studies/ dip_backtest.py (portfolio engine) · overreaction_lib.py (event study)
          run_*.py × 13 · results/<nn>_<name>/ (97 CSVs, committed on purpose)
-tests/   55 checks, synthetic fixtures, no network
+tests/   74 checks, synthetic fixtures, no network
 ```
 
 ```bash

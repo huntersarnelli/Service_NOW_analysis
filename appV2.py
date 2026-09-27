@@ -11,13 +11,16 @@ What it does
 ------------
 Answers one question: **you have cash to deploy — deploy it today, or wait?**
 
-  Overview     the deploy/wait call, market breadth, and today's candidates
-  Candidates   every name in the 124-name universe with each screen gate shown
-               separately, so you can see WHY something did or did not qualify
-  Advisor      optional LLM read on a candidate -- advisory only, never a gate
-  Portfolio    what you hold, and how many INDEPENDENT bets that really is
-  Evidence     every rule with the number behind it, and the graveyard of what
-               was tested and failed
+  Today         one-screen summary: deploy call, watchlists, market lean, portfolio
+  Deploy        the deploy/wait call, market breadth, and today's candidates
+  Candidates    every screened name with each gate shown separately, so you can
+                see WHY something did or did not qualify
+  Watchlists    your own groups (edit in the app) and where each name stands
+  Market pulse  sectors/themes vs SPY over 1-12 months -- information only
+  Portfolio     ticker / shares / average price, value, gain, risk panel
+  Advisor       optional LLM read on a candidate -- advisory only, never a gate
+  Evidence      every rule with the number behind it, and the graveyard of what
+                was tested and failed
 
 What it deliberately does NOT do
 --------------------------------
@@ -43,8 +46,9 @@ from data.advisor import (
     available as advisor_available,
     get_advice,
 )
+from data.holdings import load_holdings
 from data.market import get_data_batch, get_earnings_batch
-from data.portfolio import get_store
+from data.market_pulse import pulse_tickers, relative_strength_table
 from data.screen import (
     EVIDENCE,
     SCREENS,
@@ -54,6 +58,11 @@ from data.screen import (
     failed_gates,
     run_screen,
 )
+from data.watchlists import all_watchlist_tickers, load_watchlists
+from ui.desk_portfolio import render_portfolio as render_holdings
+from ui.desk_pulse import render_pulse
+from ui.desk_today import render_today
+from ui.desk_watchlists import render_watchlists
 
 warnings.filterwarnings("ignore")
 
@@ -173,6 +182,12 @@ def main() -> None:
             "Max names to split across", 1, 10, 4,
             help="Cash is split equally across the top-ranked qualifying names.",
         )
+        drawdown_limit = st.number_input(
+            "Drop you can sit through without selling (%)", min_value=5.0,
+            max_value=90.0, value=35.0, step=5.0, format="%.0f",
+            help="Used by the Portfolio risk panel. Be honest: the tech-only "
+                 "basket fell 51% in testing; a mixed basket 30%.",
+        )
 
         st.divider()
         with st.expander("Thresholds", expanded=False):
@@ -195,10 +210,17 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-    tickers = tuple(UNIVERSE_V2 + [BENCHMARK])
+    groups = load_watchlists()
+    holdings = load_holdings()
+    # Names the screen evaluates: the calibrated universe, plus anything on a
+    # watchlist or in the portfolio. Breadth stays on UNIVERSE_V2 only.
+    screened = list(dict.fromkeys(
+        UNIVERSE_V2 + all_watchlist_tickers(groups) + [h.ticker for h in holdings]
+    ))
+    tickers = tuple(dict.fromkeys(screened + pulse_tickers() + [BENCHMARK]))
     with st.spinner(f"Loading {len(tickers)} names…"):
         frames = cached_frames(tickers)
-        earnings = cached_earnings(tuple(UNIVERSE_V2))
+        earnings = cached_earnings(tuple(screened))
 
     if not frames or BENCHMARK not in frames:
         st.error(
@@ -207,7 +229,9 @@ def main() -> None:
         )
         st.stop()
 
-    result = run_screen(frames, earnings, spec)
+    screen_frames = {t: frames[t] for t in screened + [BENCHMARK] if t in frames}
+    result = run_screen(screen_frames, earnings, spec, breadth_universe=UNIVERSE_V2)
+    pulse_table = relative_strength_table(frames, benchmark=BENCHMARK)
     if not result.rows:
         st.error("Not enough history to run the screen.")
         st.stop()
@@ -216,27 +240,26 @@ def main() -> None:
     dipping = [r for r in result.rows if r["gate_dip"]]
 
     tabs = st.tabs([
-        "🎯 Deploy", "🔬 Candidates", "🤖 Advisor", "📁 Portfolio", "📐 Evidence",
+        "🏠 Today", "🎯 Deploy", "🔬 Candidates", "⭐ Watchlists",
+        "🧭 Market pulse", "📁 Portfolio", "🤖 Advisor", "📐 Evidence",
     ])
 
-    # ── Deploy ────────────────────────────────────────────────
     with tabs[0]:
-        render_deploy(result, spec, qualifying, dipping, cash, max_names)
-
-    # ── Candidates ────────────────────────────────────────────
+        render_today(result, qualifying, cash, max_names, groups, holdings, frames, pulse_table)
     with tabs[1]:
-        render_candidates(result, spec, frames)
-
-    # ── Advisor ───────────────────────────────────────────────
+        render_deploy(result, spec, qualifying, dipping, cash, max_names)
     with tabs[2]:
-        render_advisor(result, spec, qualifying, dipping)
-
-    # ── Portfolio ─────────────────────────────────────────────
+        render_candidates(result, spec, frames)
     with tabs[3]:
-        render_portfolio(frames)
-
-    # ── Evidence ──────────────────────────────────────────────
+        render_watchlists(groups, result.rows)
     with tabs[4]:
+        render_pulse(pulse_table)
+    with tabs[5]:
+        render_holdings(holdings, frames, drawdown_limit)
+        render_concentration(frames, [h.ticker for h in holdings])
+    with tabs[6]:
+        render_advisor(result, spec, qualifying, dipping)
+    with tabs[7]:
         render_evidence()
 
 
@@ -500,49 +523,13 @@ def render_advisor(result, spec, qualifying, dipping) -> None:
         )
 
 
-def render_portfolio(frames) -> None:
-    st.markdown("<div class='section-header'>What you hold</div>",
-                unsafe_allow_html=True)
-    try:
-        lots = get_store().load()
-    except Exception as e:  # noqa: BLE001
-        st.error(f"Could not load positions: {e}")
-        return
-
-    if not lots:
-        st.info(
-            "No positions recorded. Add them in the original `app.py` Portfolio "
-            "tab — this app reads the same store."
-        )
-        held = []
-    else:
-        rows = []
-        for lot in lots:
-            t = getattr(lot, "ticker", None) or lot.get("ticker")
-            sh = getattr(lot, "shares", None) or lot.get("shares", 0)
-            ep = getattr(lot, "entry_price", None) or lot.get("entry_price", 0)
-            df = frames.get(t)
-            px = float(df["Close"].iloc[-1]) if df is not None and not df.empty else np.nan
-            rows.append({
-                "Ticker": t, "Shares": sh, "Entry": ep, "Price": px,
-                "Value": sh * px if pd.notna(px) else np.nan,
-                "P&L %": (px / ep - 1) * 100 if ep and pd.notna(px) else np.nan,
-            })
-        pf = pd.DataFrame(rows)
-        total = pf["Value"].sum()
-        pf["Weight %"] = pf["Value"] / total * 100 if total else np.nan
-        st.dataframe(
-            pf.style.format({
-                "Shares": "{:,.3f}", "Entry": "${:,.2f}", "Price": "${:,.2f}",
-                "Value": "${:,.2f}", "P&L %": "{:+.1f}%", "Weight %": "{:.1f}%",
-            }),
-            width="stretch", hide_index=True,
-        )
-        held = sorted(set(pf["Ticker"].dropna().tolist()))
-
+def render_concentration(frames, held: list[str]) -> None:
+    """Compare how many independent bets your holdings, the universe, and the
+    original trio really are. (Holdings themselves are edited in ui/desk_portfolio.py.)"""
     st.markdown("<div class='section-header'>How many bets is that really?</div>",
                 unsafe_allow_html=True)
     st.caption(
+        "Compare your holdings with the full universe and the original trio. "
         "The measurement that explains every negative result in this project. "
         "Thirty tech names are only **4.6 independent bets**; the original "
         "META/NVDA/NET trio is **2.1**, with one factor driving 64% of all "

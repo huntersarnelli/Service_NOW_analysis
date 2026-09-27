@@ -57,14 +57,19 @@ Read them in order; each one answers a question the previous one raised.
 | **`screen.py`** | **The evidence-backed dip screen.** Every threshold traces to a measured result; the docstring carries the provenance table. | `appV2.py` |
 | **`advisor.py`** | Optional LLM advisory layer. Advisory only — never gates a signal, never backtested. | `appV2.py` |
 | `market.py` | Batched OHLCV download, indicators, live levels | both apps |
-| `portfolio.py` | Lot model + pluggable storage (`portfolio_data/lots.json`) | both apps |
+| `portfolio.py` | Lot model + pluggable storage (`portfolio_data/lots.json`) | `app.py` |
+| `holdings.py` | Simple portfolio: ticker, shares, average price (`portfolio_data/holdings.json`); imports old lots | `appV2.py` |
+| `watchlists.py` | Your named ticker groups (`portfolio_data/watchlists.json`). Screened, never counted in breadth | `appV2.py` |
+| `market_pulse.py` | Sector/theme funds vs SPY over 1–12 months. **Information only — not a tested signal.** | `appV2.py` |
 | `strategies.py` | Method A / Method B rule sets + open-lot evaluation | `app.py` |
 | `media_earnings.py` | News sentiment + earnings context. **Informational only — never gates a signal.** | `app.py` |
 
 ## `ui/` — `app.py` tab renderers
 
 `portfolio_tab.py` (positions, entry markers, trailing-stop path) and
-`media_earnings_tab.py`. `appV2.py` renders its own UI inline.
+`media_earnings_tab.py` for `app.py`. For `appV2.py`: `desk_today.py`,
+`desk_watchlists.py`, `desk_pulse.py`, `desk_portfolio.py` (+ `desk_common.py`
+helpers); the Deploy, Candidates, Advisor and Evidence tabs are still inline.
 
 ---
 
@@ -110,6 +115,7 @@ Every number in `docs/` traces to a CSV here.
 ```bash
 python tests/test_backtest_engine.py           # 27 checks on the engine
 python tests/test_strategies_and_portfolio.py  # 28 checks on rules + storage
+python tests/test_desk_build1.py               # 19 checks: watchlists, holdings, pulse, breadth
 ```
 
 Synthetic fixtures with known answers. **No network needed.** The engine tests
