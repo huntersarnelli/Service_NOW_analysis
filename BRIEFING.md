@@ -233,6 +233,15 @@ slightly more efficient; it does not make it safe and it is not a return engine.
 
 ---
 
+### Deployment Desk v3 (Sep 2026) — the "Your call" lane
+
+Dips the rules skip (company news, just after earnings, falling alone) are no
+longer hidden: they show as 🟠 **Your call** with headlines, the historical base
+rate, and a Buy/Pass log (`data/journal.py`). The owner's view: a rule cannot
+read a headline (the META lawsuit dip was a correct overreaction call). The
+data's view: these drift lower on average. The journal settles it — score the
+owner's calls vs QQQ after ~30 decisions (Build 2) before trusting either.
+
 ## 5. The graveyard — do not re-propose these
 
 Eleven interventions, all tested with out-of-sample or null controls, all failed.
@@ -286,11 +295,11 @@ docs/    01_STRATEGY_REVIEW · 02_OVERREACTION_STUDY · 03_OPTIMISATION_STUDY
          04_PORTFOLIO_STUDY · DEAD_ENDS · legacy_*
 data/    screen.py (the live rules) · advisor.py (LLM) · market · portfolio
          strategies (A/B) · media_earnings (informational only)
-         holdings · watchlists · market_pulse (Deployment Desk v3, Build 1)
-ui/      desk_*.py — appV2 Today / Watchlists / Market pulse / Portfolio tabs
+         holdings · watchlists · market_pulse · signals · news · journal (Desk v3)
+ui/      desk_*.py — appV2's five tabs: Today · Stocks · Portfolio · Market · How it works
 studies/ dip_backtest.py (portfolio engine) · overreaction_lib.py (event study)
          run_*.py × 13 · results/<nn>_<name>/ (97 CSVs, committed on purpose)
-tests/   74 checks, synthetic fixtures, no network
+tests/   96 checks, synthetic fixtures, no network
 ```
 
 ```bash

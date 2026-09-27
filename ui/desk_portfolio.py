@@ -19,7 +19,7 @@ from data.holdings import (
     value_holdings,
 )
 from data.portfolio import get_store
-from data.screen import SECTORS, effective_bets
+from data.screen import SECTORS, UNIVERSE_V2, effective_bets
 from ui.desk_common import GREEN, RED, fmt_money, last_close, previous_close, section
 
 
@@ -153,3 +153,67 @@ def render_risk(holdings, frames, snapshot, drawdown_limit_pct: float) -> None:
             st.success(f"Past-year worst drop {abs(worst):.0f}% is inside your "
                        f"{drawdown_limit_pct:.0f}% limit. A bad year can still be worse — "
                        "the tech-only basket fell 51% in testing.")
+
+
+def render_concentration(frames, held: list[str]) -> None:
+    """Compare how many independent bets your holdings, the universe, and the
+    original trio really are. (Holdings themselves are edited in ui/desk_portfolio.py.)"""
+    st.markdown("<div class='section-header'>How many bets is that really?</div>",
+                unsafe_allow_html=True)
+    st.caption(
+        "Compare your holdings with the full universe and the original trio. "
+        "The measurement that explains every negative result in this project. "
+        "Thirty tech names are only **4.6 independent bets**; the original "
+        "META/NVDA/NET trio is **2.1**, with one factor driving 64% of all "
+        "variance. Spreading capital across tickers that are the same bet does "
+        "not diversify anything — which is why every position-sizing rule "
+        "tested moved nothing."
+    )
+
+    choice = st.radio(
+        "Measure", ["My holdings", "Full 124-name universe", "META / NVDA / NET"],
+        horizontal=True,
+    )
+    if choice == "My holdings":
+        names = held
+    elif choice == "META / NVDA / NET":
+        names = ["META", "NVDA", "NET"]
+    else:
+        names = UNIVERSE_V2
+
+    if len(names) < 2:
+        st.info("Need at least two names to measure concentration.")
+        return
+
+    eb = effective_bets(frames, names)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Names", eb["n_names"])
+    c2.metric("Effective bets", f"{eb['effective_bets']:.1f}" if
+              pd.notna(eb["effective_bets"]) else "—")
+    c3.metric("Avg correlation", f"{eb['avg_corr']:.2f}" if
+              pd.notna(eb["avg_corr"]) else "—")
+    c4.metric("Largest factor", f"{eb['pc1_pct']:.0f}%" if
+              pd.notna(eb["pc1_pct"]) else "—",
+              help="Share of total variance explained by the single biggest "
+                   "common factor. Above ~45% you own one bet wearing many tickers.")
+
+    if pd.notna(eb["effective_bets"]) and eb["n_names"]:
+        ratio = eb["effective_bets"] / eb["n_names"]
+        if ratio < 0.2:
+            st.error(
+                f"**{eb['n_names']} tickers, {eb['effective_bets']:.1f} bets.** "
+                "This is a concentrated single-factor position. Widening past "
+                "one sector was worth 21 points of drawdown in testing — more "
+                "than every sizing rule combined."
+            )
+        elif ratio < 0.35:
+            st.warning(
+                f"{eb['n_names']} tickers behaving like {eb['effective_bets']:.1f} "
+                "bets. Adding names outside the dominant sector buys more than "
+                "resizing the ones you have."
+            )
+        else:
+            st.success(
+                f"{eb['n_names']} tickers, {eb['effective_bets']:.1f} effective "
+                "bets — reasonably diversified for a concentrated book."
+            )

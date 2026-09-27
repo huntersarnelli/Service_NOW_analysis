@@ -61,15 +61,19 @@ Read them in order; each one answers a question the previous one raised.
 | `holdings.py` | Simple portfolio: ticker, shares, average price (`portfolio_data/holdings.json`); imports old lots | `appV2.py` |
 | `watchlists.py` | Your named ticker groups (`portfolio_data/watchlists.json`). Screened, never counted in breadth | `appV2.py` |
 | `market_pulse.py` | Sector/theme funds vs SPY over 1–12 months. **Information only — not a tested signal.** | `appV2.py` |
+| `signals.py` | Plain-English status: 🟢 Buy zone / 🟠 Your call / 👀 Close to a dip, with reasons and base rates | `appV2.py` |
+| `news.py` | Headlines for your-call stocks (Alpha Vantage with sentiment, else Yahoo). **Never placeholders.** | `appV2.py` |
+| `journal.py` | Your Buy/Pass decisions on your-call stocks (`portfolio_data/journal.json`) | `appV2.py` |
 | `strategies.py` | Method A / Method B rule sets + open-lot evaluation | `app.py` |
 | `media_earnings.py` | News sentiment + earnings context. **Informational only — never gates a signal.** | `app.py` |
 
 ## `ui/` — `app.py` tab renderers
 
 `portfolio_tab.py` (positions, entry markers, trailing-stop path) and
-`media_earnings_tab.py` for `app.py`. For `appV2.py`: `desk_today.py`,
-`desk_watchlists.py`, `desk_pulse.py`, `desk_portfolio.py` (+ `desk_common.py`
-helpers); the Deploy, Candidates, Advisor and Evidence tabs are still inline.
+`media_earnings_tab.py` for `app.py`. For `appV2.py` (five tabs): `desk_today.py`,
+`desk_stocks.py` (watchlists + screen + your-call panel + decision log),
+`desk_portfolio.py`, `desk_market.py` (+ `desk_pulse.py`), `desk_howto.py`,
+and `desk_common.py` helpers.
 
 ---
 
@@ -116,6 +120,7 @@ Every number in `docs/` traces to a CSV here.
 python tests/test_backtest_engine.py           # 27 checks on the engine
 python tests/test_strategies_and_portfolio.py  # 28 checks on rules + storage
 python tests/test_desk_build1.py               # 19 checks: watchlists, holdings, pulse, breadth
+python tests/test_desk_signals.py              # 22 checks: statuses, headlines, journal
 ```
 
 Synthetic fixtures with known answers. **No network needed.** The engine tests
