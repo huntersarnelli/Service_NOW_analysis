@@ -2,12 +2,14 @@
 Deployment Desk — the interface for the strategy that survived the studies.
 ==========================================================================
 
-Five tabs, in the order you'd use them:
+Six tabs, in the order you'd use them:
 
   Brief         the to-do list (phone-first): insider paper buys, want-to-buy
                 crossings, big moves in your stocks, your calls, buy zone, earnings
-  Watchlist     ⭐ want-to-buy progress bars + your stocks; click one for its
-                chart, headlines and (for 🟠 Your call) a Buy / Pass log
+  Watchlist     overview: ⭐ want-to-buy (autocomplete box + progress bars) and
+                your lists; click a row to open it in the Stock tab
+  Stock         one stock: search any ticker, chart (1M-1Y), status, headlines
+                on request, Buy / Pass for 🟠 Your call
   Portfolio     ticker / shares / average price, value, gain, risk
   Track record  your calls, buy-zone signals and insider paper trades, scored
   More          market breadth and sector leadership (information only) and
@@ -38,9 +40,10 @@ from data.screen import EVIDENCE, SCREENS, UNIVERSE_V2, run_screen
 from data.watchlists import all_watchlist_tickers, load_watchlists
 from ui.desk_more import render_more
 from ui.desk_portfolio import render_portfolio
-from ui.desk_watch import render_watch
 from ui.desk_brief import render_brief
+from ui.desk_stock import render_stock
 from ui.desk_track import render_track
+from ui.desk_watch import render_watch
 
 warnings.filterwarnings("ignore")
 
@@ -128,12 +131,17 @@ def main() -> None:
 
     groups = load_watchlists()
     holdings = load_holdings()
-    # Screened: the calibrated 124 + your watchlists + your holdings. Breadth stays on the 124.
-    screened = list(dict.fromkeys(UNIVERSE_V2 + all_watchlist_tickers(groups) + [h.ticker for h in holdings]))
-    tickers = tuple(dict.fromkeys(screened + pulse_tickers() + [BENCHMARK]))
-    with st.spinner(f"Loading {len(tickers)} stocks and funds…"):
-        frames = cached_frames(tickers)
-        earnings = cached_earnings(tuple(screened))
+    # Screened: the calibrated 124 + your lists + holdings + anything looked up this session.
+    # Breadth stays on the 124. The core set and your personal set are downloaded and cached
+    # separately, so editing a list only fetches your stocks, not all ~150.
+    core = tuple(dict.fromkeys(UNIVERSE_V2 + pulse_tickers() + [BENCHMARK]))
+    yours = list(dict.fromkeys(all_watchlist_tickers(groups) + [h.ticker for h in holdings]
+                               + st.session_state.get("extra_tickers", [])))
+    personal = tuple(t for t in yours if t not in core)  # only these need their own download
+    screened = list(dict.fromkeys(UNIVERSE_V2 + [t for t in yours if t != BENCHMARK]))
+    with st.spinner("Loading market data…"):
+        frames = {**cached_frames(core), **(cached_frames(personal) if personal else {})}
+        earnings = {**cached_earnings(tuple(UNIVERSE_V2)), **(cached_earnings(personal) if personal else {})}
     if not frames or BENCHMARK not in frames:
         st.error("No market data returned. Yahoo throttles heavily — wait a minute and hit Refresh.")
         st.stop()
@@ -148,16 +156,18 @@ def main() -> None:
     mine = all_watchlist_tickers(groups) + [h.ticker for h in holdings]
     premarket = cached_premarket(tuple(dict.fromkeys(mine + list(FUTURES))))
 
-    tabs = st.tabs(["☀️ Brief", "⭐ Watchlist", "📁 Portfolio", "📊 Track record", "➕ More"])
+    tabs = st.tabs(["☀️ Brief", "⭐ Watchlist", "🔍 Stock", "📁 Portfolio", "📊 Track record", "➕ More"])
     with tabs[0]:
         render_brief(result, groups, holdings, frames, premarket)
     with tabs[1]:
-        render_watch(result, SPEC, groups, holdings, frames, BENCHMARK, alpha_vantage_key())
+        render_watch(result, groups, holdings, frames)
     with tabs[2]:
-        render_portfolio(holdings, frames)
+        render_stock(result, SPEC, groups, frames, BENCHMARK, alpha_vantage_key())
     with tabs[3]:
-        render_track(frames)
+        render_portfolio(holdings, frames)
     with tabs[4]:
+        render_track(frames)
+    with tabs[5]:
         render_more(result, SPEC, pulse_table)
 
 

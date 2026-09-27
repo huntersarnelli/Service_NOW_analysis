@@ -75,10 +75,12 @@ Read them in order; each one answers a question the previous one raised.
 
 `portfolio_tab.py` (positions, entry markers, trailing-stop path) and
 `media_earnings_tab.py` for `app.py`. For `appV2.py` (five tabs): `desk_brief.py` (Brief),
-`desk_watch.py` (Watchlist: ⭐ want-to-buy bars, your stocks, click-to-open detail, list manager),
+`desk_watch.py` (Watchlist: ⭐ want-to-buy autocomplete box + progress bars, your lists, list editing),
+`desk_stock.py` (Stock: search any ticker, chart 1M–1Y, status, headlines on request, Buy/Pass),
 `desk_portfolio.py`, `desk_track.py` (Track record + decision log), `desk_more.py`
 (= `desk_market.py` + `desk_pulse.py` + `desk_howto.py`), and `desk_common.py` helpers.
 Also `data/premarket.py` (extended-hours moves) and `data/brief.py` (the to-do list).
+`data/tickers.py` holds the SEC ticker→company directory used for autocomplete.
 
 ---
 
@@ -126,6 +128,7 @@ python tests/test_backtest_engine.py           # 27 checks on the engine
 python tests/test_strategies_and_portfolio.py  # 28 checks on rules + storage
 python tests/test_desk_build1.py               # 19 checks: watchlists, holdings, pulse, breadth
 python tests/test_desk_signals.py              # 22 checks: statuses, headlines, journal
+python tests/test_desk_ui_logic.py             # 6 checks: autocomplete, default stock, sorting
 python tests/test_desk_build2.py               # 25 checks: SEC feed/Form 4, H10 rules, paper trades, scoreboard
 ```
 
