@@ -4,8 +4,9 @@ Today tab: the one-screen summary, in the order you'd act on it.
   1. 🟢 Buy zone      — what the evidence says to do with new cash
   2. 🟠 Your call     — your stocks dipping on their own news or after earnings
   3. 👀 Close to a dip — your stocks within 3% of their dip price
-  4. The market       — how many stocks are falling; which sectors lead
-  5. Your portfolio
+  4. ⚡ Insider buys   — scan EDGAR for insider purchases (paper trading)
+  5. The market       — how many stocks are falling; which sectors lead
+  6. Your portfolio
 """
 
 from __future__ import annotations
@@ -14,7 +15,10 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+from data.insider_feed import scan as insider_scan
 from data.market_pulse import leaders_and_laggards
+from data.paper_trades import add_signals
+from data.screen import SECTORS
 from data.signals import NEAR, YOUR_CALL
 from ui.desk_common import GREEN, GREY, fmt_money, section, verdict_card
 from ui.desk_portfolio import portfolio_snapshot
@@ -86,7 +90,10 @@ def render_today(result, spec, qualifying, cash, max_names, groups, holdings, fr
             {"Price": "${:,.2f}", "Dip price": "${:,.2f}", "To dip price": "{:+.1f}%"}),
             width="stretch", hide_index=True)
 
-    # 4 — Market
+    # 4 — Insider buys (paper trading)
+    render_insider_scan(result, frames)
+
+    # 5 — Market
     section("The market")
     st.markdown(breadth_sentence(result.breadth, spec.breadth_lo))
     if pulse_table is not None and not pulse_table.empty:
@@ -95,7 +102,7 @@ def render_today(result, spec, qualifying, cash, max_names, groups, holdings, fr
                     f"**Lagging:** {', '.join(laggards) or '—'}")
         st.caption("ℹ️ Sector leadership is information, not a tested signal. Details: Market tab.")
 
-    # 5 — Portfolio
+    # 6 — Portfolio
     section("Your portfolio")
     if not holdings:
         st.caption("No holdings saved yet — add them on the Portfolio tab.")
@@ -106,3 +113,52 @@ def render_today(result, spec, qualifying, cash, max_names, groups, holdings, fr
     gain_pct = snap["gain"] / snap["cost"] * 100 if snap["cost"] else float("nan")
     c2.metric("Total gain", fmt_money(snap["gain"]), f"{gain_pct:+.1f}%" if pd.notna(gain_pct) else None)
     c3.metric("Today", fmt_money(snap["day_change"]))
+
+
+def render_insider_scan(result, frames) -> None:
+    section("⚡ Insider buys — paper trading")
+    st.caption(
+        "Scans the SEC's live Form 4 feed for open-market insider **purchases** in the stocks this "
+        "app screens. Backtest (tech, 2013–2026): buying at the first open after the filing beat "
+        "random days by ~+0.5pp same day, ~+0.7pp by the next close — but ~70% of the move happens "
+        "overnight, so run this in the **evening or before 9:30 ET**. Every passing signal is logged "
+        "as a paper trade (Track record tab). **Paper only until ~30 trades confirm it.**"
+    )
+    st.caption("The SEC's live feed only holds about the **last business day** of filings (from "
+               "mid-afternoon on), which covers the evening and pre-market filings this trade uses. "
+               "Scan once every evening or morning — a missed day can't be recovered here.")
+    hours = 48  # the feed's own depth is the real limit (~1 business day)
+    if st.button("⚡ Scan EDGAR now", type="primary"):
+        screened = {r["ticker"] for r in result.rows}
+        trading_days = pd.DatetimeIndex(frames["SPY"].index)
+        bar = st.progress(0.0, text="Reading the SEC feed…")
+        def progress(i, n):
+            bar.progress(i / n, text=f"Checking filing {i} of {n}…")
+        try:
+            found = insider_scan(hours, screened, SECTORS, frames, trading_days, progress)
+        except Exception as exc:  # noqa: BLE001 -- network / SEC hiccup
+            st.error(f"Scan failed: {exc}. The SEC throttles at times — try again in a minute.")
+            return
+        bar.empty()
+        st.session_state["insider_scan"] = found
+        added = add_signals(found)
+        st.success(f"{len(found)} insider purchase filing(s) in your stocks; "
+                   f"{added} new paper trade(s) logged.")
+    found = st.session_state.get("insider_scan")
+    if found is None:
+        return
+    if found.empty:
+        st.caption("No insider purchases in your stocks in that window. (Sales and grants are ignored.)")
+        return
+    view = found.assign(
+        Signal=found["passes"].map({True: "✅ paper trade", False: "skipped"}),
+        Plan=[f"buy at {t} on {d}" for t, d in zip(found["entry_type"], found["entry_date"])],
+        Sector=found["tested_sector"].map({True: "tech (tested)", False: "untested"}),
+    )
+    st.dataframe(
+        view[["Signal", "ticker", "insider", "role", "value_usd", "accepted", "Plan", "Sector", "fails"]]
+        .rename(columns={"ticker": "Stock", "insider": "Insider", "role": "Role", "value_usd": "Bought $",
+                         "accepted": "Filed (ET)", "fails": "Why skipped"})
+        .style.format({"Bought $": "${:,.0f}"}),
+        width="stretch", hide_index=True,
+    )

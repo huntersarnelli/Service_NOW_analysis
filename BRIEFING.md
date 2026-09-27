@@ -240,7 +240,14 @@ longer hidden: they show as 🟠 **Your call** with headlines, the historical ba
 rate, and a Buy/Pass log (`data/journal.py`). The owner's view: a rule cannot
 read a headline (the META lawsuit dip was a correct overreaction call). The
 data's view: these drift lower on average. The journal settles it — score the
-owner's calls vs QQQ after ~30 decisions (Build 2) before trusting either.
+owner's calls vs QQQ after ~30 decisions before trusting either.
+
+**Build 2 (Track record tab):** your buys, your passes and every auto-logged
+buy-zone signal are scored vs QQQ at 20/60 trading days. The **insider fast
+trade** (insider-trading repo H10: buy at the first open after an insider-purchase
+filing, hold ≤1 day; +0.48pp same day / +0.69pp next close vs SPY in tech,
+t≈3) is live as a **paper-trading** scan on the Today tab. The SEC live feed only
+holds ~the last business day, so scan every evening or morning.
 
 ## 5. The graveyard — do not re-propose these
 
@@ -295,11 +302,13 @@ docs/    01_STRATEGY_REVIEW · 02_OVERREACTION_STUDY · 03_OPTIMISATION_STUDY
          04_PORTFOLIO_STUDY · DEAD_ENDS · legacy_*
 data/    screen.py (the live rules) · advisor.py (LLM) · market · portfolio
          strategies (A/B) · media_earnings (informational only)
-         holdings · watchlists · market_pulse · signals · news · journal (Desk v3)
-ui/      desk_*.py — appV2's five tabs: Today · Stocks · Portfolio · Market · How it works
+         holdings · watchlists · market_pulse · signals · news · journal
+         scoreboard · insider_feed · paper_trades · sec_client (Desk v3)
+ui/      desk_*.py — appV2's six tabs: Today · Stocks · Portfolio · Track record ·
+         Market · How it works
 studies/ dip_backtest.py (portfolio engine) · overreaction_lib.py (event study)
          run_*.py × 13 · results/<nn>_<name>/ (97 CSVs, committed on purpose)
-tests/   96 checks, synthetic fixtures, no network
+tests/   121 checks, synthetic fixtures, no network
 ```
 
 ```bash

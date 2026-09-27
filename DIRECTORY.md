@@ -64,6 +64,10 @@ Read them in order; each one answers a question the previous one raised.
 | `signals.py` | Plain-English status: 🟢 Buy zone / 🟠 Your call / 👀 Close to a dip, with reasons and base rates | `appV2.py` |
 | `news.py` | Headlines for your-call stocks (Alpha Vantage with sentiment, else Yahoo). **Never placeholders.** | `appV2.py` |
 | `journal.py` | Your Buy/Pass decisions on your-call stocks (`portfolio_data/journal.json`) | `appV2.py` |
+| `scoreboard.py` | Scores your calls + auto-logged buy-zone signals vs QQQ at 20/60 days | `appV2.py` |
+| `insider_feed.py` | Live SEC Form 4 scan with the H10 rules (insider-trading repo). **Paper trading only.** | `appV2.py` |
+| `paper_trades.py` | Insider paper-trade log; fills same-day / next-day outcomes vs SPY and QQQ | `appV2.py` |
+| `sec_client.py` | Polite SEC requests (User-Agent, 5 req/s, retries) | `insider_feed.py` |
 | `strategies.py` | Method A / Method B rule sets + open-lot evaluation | `app.py` |
 | `media_earnings.py` | News sentiment + earnings context. **Informational only — never gates a signal.** | `app.py` |
 
@@ -72,7 +76,7 @@ Read them in order; each one answers a question the previous one raised.
 `portfolio_tab.py` (positions, entry markers, trailing-stop path) and
 `media_earnings_tab.py` for `app.py`. For `appV2.py` (five tabs): `desk_today.py`,
 `desk_stocks.py` (watchlists + screen + your-call panel + decision log),
-`desk_portfolio.py`, `desk_market.py` (+ `desk_pulse.py`), `desk_howto.py`,
+`desk_portfolio.py`, `desk_track.py` (Track record), `desk_market.py` (+ `desk_pulse.py`), `desk_howto.py`,
 and `desk_common.py` helpers.
 
 ---
@@ -121,6 +125,7 @@ python tests/test_backtest_engine.py           # 27 checks on the engine
 python tests/test_strategies_and_portfolio.py  # 28 checks on rules + storage
 python tests/test_desk_build1.py               # 19 checks: watchlists, holdings, pulse, breadth
 python tests/test_desk_signals.py              # 22 checks: statuses, headlines, journal
+python tests/test_desk_build2.py               # 25 checks: SEC feed/Form 4, H10 rules, paper trades, scoreboard
 ```
 
 Synthetic fixtures with known answers. **No network needed.** The engine tests

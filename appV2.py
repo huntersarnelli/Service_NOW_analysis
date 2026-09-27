@@ -9,6 +9,7 @@ Five tabs, in the order you'd use them:
   Stocks        your watchlists / holdings / the whole screen with a plain-English
                 status; open a stock for its chart, headlines and a Buy/Pass log
   Portfolio     ticker / shares / average price, value, gain, risk
+  Track record  your calls, buy-zone signals and insider paper trades, scored
   Market        how many stocks are falling; sector leadership (information only)
   How it works  glossary, statuses, the evidence, and what failed
 
@@ -31,6 +32,7 @@ import streamlit as st
 from data.holdings import load_holdings
 from data.market import get_data_batch, get_earnings_batch
 from data.market_pulse import pulse_tickers, relative_strength_table
+from data.scoreboard import log_buy_zone
 from data.screen import EVIDENCE, SCREENS, UNIVERSE_V2, run_screen
 from data.watchlists import all_watchlist_tickers, load_watchlists
 from ui.desk_howto import render_howto
@@ -38,6 +40,7 @@ from ui.desk_market import render_market
 from ui.desk_portfolio import render_concentration, render_portfolio
 from ui.desk_stocks import render_stocks
 from ui.desk_today import render_today
+from ui.desk_track import render_track
 
 warnings.filterwarnings("ignore")
 
@@ -144,9 +147,11 @@ def main() -> None:
         st.error("Not enough history to run the screen.")
         st.stop()
     qualifying = [r for r in result.rows if r["qualifies"]]
+    log_buy_zone(qualifying)  # every buy-zone signal is scored later on the Track record tab
     pulse_table = relative_strength_table(frames, benchmark=BENCHMARK)
 
-    tabs = st.tabs(["🏠 Today", "📋 Stocks", "📁 Portfolio", "🧭 Market", "📐 How it works"])
+    tabs = st.tabs(["🏠 Today", "📋 Stocks", "📁 Portfolio", "📊 Track record", "🧭 Market",
+                    "📐 How it works"])
     with tabs[0]:
         render_today(result, SPEC, qualifying, cash, max_names, groups, holdings, frames, pulse_table)
     with tabs[1]:
@@ -155,8 +160,10 @@ def main() -> None:
         render_portfolio(holdings, frames, drawdown_limit)
         render_concentration(frames, [h.ticker for h in holdings])
     with tabs[3]:
-        render_market(result, SPEC, pulse_table)
+        render_track(frames)
     with tabs[4]:
+        render_market(result, SPEC, pulse_table)
+    with tabs[5]:
         render_howto()
 
 
