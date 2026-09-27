@@ -2,10 +2,10 @@
 Deployment Desk — the interface for the strategy that survived the studies.
 ==========================================================================
 
-Five tabs, in the order you'd use them:
+Six tabs, in the order you'd use them:
 
-  Today         what to do with new cash, your stocks that need a decision,
-                the market backdrop, your portfolio
+  Brief         the morning to-do list (phone-first): insider paper buys,
+                pre-market moves in your stocks, your calls, buy zone, earnings
   Stocks        your watchlists / holdings / the whole screen with a plain-English
                 status; open a stock for its chart, headlines and a Buy/Pass log
   Portfolio     ticker / shares / average price, value, gain, risk
@@ -32,6 +32,7 @@ import streamlit as st
 from data.holdings import load_holdings
 from data.market import get_data_batch, get_earnings_batch
 from data.market_pulse import pulse_tickers, relative_strength_table
+from data.premarket import FUTURES, fetch_moves
 from data.scoreboard import log_buy_zone
 from data.screen import EVIDENCE, SCREENS, UNIVERSE_V2, run_screen
 from data.watchlists import all_watchlist_tickers, load_watchlists
@@ -39,7 +40,7 @@ from ui.desk_howto import render_howto
 from ui.desk_market import render_market
 from ui.desk_portfolio import render_concentration, render_portfolio
 from ui.desk_stocks import render_stocks
-from ui.desk_today import render_today
+from ui.desk_brief import render_brief
 from ui.desk_track import render_track
 
 warnings.filterwarnings("ignore")
@@ -100,6 +101,11 @@ def cached_earnings(tickers: tuple[str, ...]) -> dict[str, list]:
     return get_earnings_batch(list(tickers))
 
 
+@st.cache_data(ttl=DATA_TTL, show_spinner=False)
+def cached_premarket(tickers: tuple[str, ...]) -> pd.DataFrame:
+    return fetch_moves(list(tickers))
+
+
 def alpha_vantage_key() -> str:
     """News-sentiment key from .streamlit/secrets.toml, then the environment."""
     try:
@@ -125,6 +131,7 @@ def main() -> None:
         st.divider()
         if st.button("↻ Refresh market data", width="stretch"):
             cached_frames.clear()
+            cached_premarket.clear()
             st.rerun()
         st.markdown(f"<div class='stamp'>{datetime.now().strftime('%Y-%m-%d %H:%M')}</div>",
                     unsafe_allow_html=True)
@@ -149,11 +156,13 @@ def main() -> None:
     qualifying = [r for r in result.rows if r["qualifies"]]
     log_buy_zone(qualifying)  # every buy-zone signal is scored later on the Track record tab
     pulse_table = relative_strength_table(frames, benchmark=BENCHMARK)
+    mine = all_watchlist_tickers(groups) + [h.ticker for h in holdings]
+    premarket = cached_premarket(tuple(dict.fromkeys(mine + list(FUTURES))))
 
-    tabs = st.tabs(["🏠 Today", "📋 Stocks", "📁 Portfolio", "📊 Track record", "🧭 Market",
+    tabs = st.tabs(["☀️ Brief", "📋 Stocks", "📁 Portfolio", "📊 Track record", "🧭 Market",
                     "📐 How it works"])
     with tabs[0]:
-        render_today(result, SPEC, qualifying, cash, max_names, groups, holdings, frames, pulse_table)
+        render_brief(result, qualifying, cash, max_names, groups, holdings, frames, premarket)
     with tabs[1]:
         render_stocks(result, SPEC, groups, holdings, frames, BENCHMARK, alpha_vantage_key())
     with tabs[2]:
