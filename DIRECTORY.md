@@ -82,6 +82,8 @@ Read them in order; each one answers a question the previous one raised.
 Also `data/premarket.py` (extended-hours moves) and `data/brief.py` (the to-do list).
 `data/tickers.py` holds the SEC ticker→company directory used for autocomplete.
 
+**Multi-user / cloud (docs/DEPLOY.md):** `data/store.py` (FileStore locally, SupabaseStore in the cloud; per-user, never global), `data/accounts.py` (invite list, admin, settings), `data/telegram.py`, `ui/desk_account.py` (sign-in, Phone & alerts, Friends), `scripts/send_briefs.py` + `.github/workflows/desk-alerts.yml` (scheduled briefs/alerts), `scripts/migrate_local_to_cloud.py`.
+
 ---
 
 ## `studies/` — engines, runners, results
@@ -129,6 +131,7 @@ python tests/test_strategies_and_portfolio.py  # 28 checks on rules + storage
 python tests/test_desk_build1.py               # 19 checks: watchlists, holdings, pulse, breadth
 python tests/test_desk_signals.py              # 22 checks: statuses, headlines, journal
 python tests/test_desk_ui_logic.py             # 6 checks: autocomplete, default stock, sorting
+python tests/test_accounts.py                 # 17 checks: per-user storage, invites, Telegram, safety stop
 python tests/test_desk_build2.py               # 25 checks: SEC feed/Form 4, H10 rules, paper trades, scoreboard
 ```
 

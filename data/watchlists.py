@@ -11,14 +11,12 @@ Stored in portfolio_data/watchlists.json (gitignored, like your positions).
 
 from __future__ import annotations
 
-import json
-import os
 import re
 from datetime import datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-WATCHLIST_PATH = REPO_ROOT / "portfolio_data" / "watchlists.json"
+WATCHLIST_DOC = "watchlists"
 
 WANT_TO_BUY = "⭐ Want to buy"  # the short list the brief tracks against each stock's dip price
 
@@ -54,35 +52,22 @@ def clean_ticker_list(raw: str | list[str]) -> tuple[list[str], list[str]]:
     return valid, rejected
 
 
-def load_watchlists(path: Path = WATCHLIST_PATH) -> dict[str, list[str]]:
-    """Saved watchlists, or the starter groups if nothing has been saved yet."""
-    if not Path(path).exists():
+def load_watchlists(store) -> dict[str, list[str]]:
+    """This user's watchlists, or the starter groups if they have never saved any."""
+    payload = store.get(WATCHLIST_DOC)
+    if not payload:
         return {name: list(tickers) for name, tickers in DEFAULT_WATCHLISTS.items()}
-    try:
-        payload = json.loads(Path(path).read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return {name: list(tickers) for name, tickers in DEFAULT_WATCHLISTS.items()}
-    groups = payload.get("watchlists", {}) if isinstance(payload, dict) else {}
     out: dict[str, list[str]] = {}
-    for name, tickers in groups.items():
+    for name, tickers in (payload.get("watchlists") or {}).items():
         valid, _ = clean_ticker_list(tickers if isinstance(tickers, list) else [])
         if str(name).strip():
             out[str(name).strip()] = valid
     return out
 
 
-def save_watchlists(groups: dict[str, list[str]], path: Path = WATCHLIST_PATH) -> None:
-    """Write atomically, so a crash never leaves a half-written file."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "schema": 1,
-        "updated_at": datetime.now().isoformat(timespec="seconds"),
-        "watchlists": {name: list(tickers) for name, tickers in groups.items()},
-    }
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    os.replace(tmp, path)
+def save_watchlists(groups: dict[str, list[str]], store) -> None:
+    store.put(WATCHLIST_DOC, {"schema": 1, "updated_at": datetime.now().isoformat(timespec="seconds"),
+                              "watchlists": {name: list(tickers) for name, tickers in groups.items()}})
 
 
 def all_watchlist_tickers(groups: dict[str, list[str]]) -> list[str]:

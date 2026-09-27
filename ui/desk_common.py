@@ -41,6 +41,18 @@ def previous_close(frames: dict[str, pd.DataFrame], ticker: str) -> float:
     return float(df["Close"].iloc[-2])
 
 
+def user_store():
+    """This visitor's own store, set once per session by appV2 after sign-in.
+    Kept in st.session_state (per visitor) — never in a module global, which
+    would be shared by everyone using the app at the same time."""
+    return st.session_state["user_store"]
+
+
+def shared_store():
+    """The store everyone shares: insider paper trades, buy-zone log, invite list."""
+    return st.session_state["shared_store"]
+
+
 GREEN = "#1F6F54"
 RED = "#8C2F39"
 GREY = "#64757B"

@@ -7,13 +7,11 @@ H10 rules is logged — you don't pick — and its outcome is filled in from pri
     next day   close one trading day after entry          backtest: +0.69pp vs SPY
 
 Compare the live numbers with the backtest after ~30 trades before using real money.
-Stored in portfolio_data/paper_trades.json (gitignored).
+Stored in the shared store (data/store.py): portfolio_data/paper_trades.json locally, Supabase in the cloud.
 """
 
 from __future__ import annotations
 
-import json
-import os
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime
 from pathlib import Path
@@ -22,7 +20,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-PAPER_PATH = Path(__file__).resolve().parent.parent / "portfolio_data" / "paper_trades.json"
+PAPER_DOC = "paper_trades"
 BACKTEST_SAME_DAY_EDGE = 0.48  # pp vs SPY, H10 open entries (insider-trading repo)
 BACKTEST_NEXT_DAY_EDGE = 0.69  # pp vs SPY, H10 all entries
 
@@ -48,34 +46,24 @@ class PaperTrade:
     next_day_qqq: Optional[float] = None
 
 
-def load_trades(path: Path = PAPER_PATH) -> list[PaperTrade]:
-    path = Path(path)
-    if not path.exists():
-        return []
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return []
+def load_trades(store) -> list[PaperTrade]:
+    """Insider paper trades — kept in the SHARED store (the same signals for everyone)."""
+    payload = store.get(PAPER_DOC) or {}
     fields = PaperTrade.__dataclass_fields__
     return [PaperTrade(**{k: v for k, v in rec.items() if k in fields})
             for rec in payload.get("trades", []) if isinstance(rec, dict)]
 
 
-def save_trades(trades: list[PaperTrade], path: Path = PAPER_PATH) -> None:
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"schema": 1, "updated_at": datetime.now().isoformat(timespec="seconds"),
-               "trades": [asdict(t) for t in trades]}
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    os.replace(tmp, path)
+def save_trades(trades: list[PaperTrade], store) -> None:
+    store.put(PAPER_DOC, {"schema": 1, "updated_at": datetime.now().isoformat(timespec="seconds"),
+                          "trades": [asdict(t) for t in trades]})
 
 
-def add_signals(scan_results: pd.DataFrame, path: Path = PAPER_PATH) -> int:
+def add_signals(scan_results: pd.DataFrame, store) -> int:
     """Log every passing signal not already logged (by accession). Returns how many were added."""
     if scan_results is None or scan_results.empty:
         return 0
-    trades = load_trades(path)
+    trades = load_trades(store)
     known = {t.accession for t in trades}
     added = 0
     for row in scan_results[scan_results["passes"]].itertuples(index=False):
@@ -87,7 +75,8 @@ def add_signals(scan_results: pd.DataFrame, path: Path = PAPER_PATH) -> int:
             entry_type=row.entry_type, tested_sector=bool(row.tested_sector)))
         known.add(row.accession)
         added += 1
-    save_trades(trades, path)
+    if added:
+        save_trades(trades, store)
     return added
 
 

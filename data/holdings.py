@@ -13,8 +13,6 @@ there. Run locally, or add a durable backend before relying on the cloud copy.
 
 from __future__ import annotations
 
-import json
-import os
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
@@ -25,7 +23,7 @@ import pandas as pd
 from data.portfolio import aggregate_positions
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-HOLDINGS_PATH = REPO_ROOT / "portfolio_data" / "holdings.json"
+HOLDINGS_DOC = "holdings"
 HOLDING_COLUMNS = ["ticker", "shares", "avg_price"]
 
 
@@ -102,17 +100,11 @@ def holdings_to_frame(holdings: list[Holding]) -> pd.DataFrame:
     return pd.DataFrame([asdict(h) for h in holdings])[HOLDING_COLUMNS]
 
 
-def load_holdings(path: Path = HOLDINGS_PATH) -> list[Holding]:
-    path = Path(path)
-    if not path.exists():
-        return []
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return []
-    records = payload.get("holdings", []) if isinstance(payload, dict) else []
+def load_holdings(store) -> list[Holding]:
+    """This user's holdings (store: data.store.FileStore or SupabaseStore)."""
+    payload = store.get(HOLDINGS_DOC) or {}
     holdings = []
-    for record in records:
+    for record in payload.get("holdings", []):
         if isinstance(record, dict):
             holding, error = validate_holding(record)
             if holding and not error:
@@ -120,17 +112,9 @@ def load_holdings(path: Path = HOLDINGS_PATH) -> list[Holding]:
     return holdings
 
 
-def save_holdings(holdings: list[Holding], path: Path = HOLDINGS_PATH) -> None:
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "schema": 1,
-        "updated_at": datetime.now().isoformat(timespec="seconds"),
-        "holdings": [asdict(h) for h in holdings],
-    }
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    os.replace(tmp, path)  # atomic
+def save_holdings(holdings: list[Holding], store) -> None:
+    store.put(HOLDINGS_DOC, {"schema": 1, "updated_at": datetime.now().isoformat(timespec="seconds"),
+                             "holdings": [asdict(h) for h in holdings]})
 
 
 def import_from_lots(lots: list) -> list[Holding]:

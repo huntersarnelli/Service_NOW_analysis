@@ -20,6 +20,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from data.insider_feed import parse_feed, parse_form4, planned_entry, rule_check
 from data.journal import validate_decision
 from data.paper_trades import add_signals, fill_outcomes, load_trades, summary
+from data.store import FileStore
 from data.scoreboard import build_calls, log_buy_zone, load_buy_zone_log, score_call, score_table, summarise
 
 fails = []
@@ -94,7 +95,7 @@ scan = pd.DataFrame([
      "avg_price": 9.0, "accepted": "2026-09-22T17:40", "entry_date": "2026-09-23", "entry_type": "open",
      "tested_sector": True, "passes": False, "fails": "under $10k"},
 ])
-path = tmp / "paper.json"
+path = FileStore(tmp / "paper")
 check("only passing signals are logged", add_signals(scan, path) == 1)
 check("re-scanning does not duplicate", add_signals(scan, path) == 0)
 
@@ -132,7 +133,7 @@ summary_table = summarise(score_table(calls, sframes))
 check("groups summarised", list(summary_table["Group"]) == ["Your buys", "Your passes", "Buy-zone signals"])
 check("too few calls -> 'Too early'", summary_table.loc[0, "Verdict (20d)"].startswith("Too early"))
 
-bz = tmp / "bz.json"
+bz = FileStore(tmp / "bz")
 rows = [{"ticker": "AAA", "close": 10.0, "last_bar": pd.Timestamp("2026-09-25")}]
 check("buy-zone signal logged once per day", log_buy_zone(rows, bz) == 1 and log_buy_zone(rows, bz) == 0
       and len(load_buy_zone_log(bz)) == 1)

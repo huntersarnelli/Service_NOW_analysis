@@ -16,6 +16,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 import data.news as news
 from data.journal import append_decision, load_journal, validate_decision
+from data.store import FileStore
 from data.signals import BUY_ZONE, NEAR, NONE, YOUR_CALL, cause, classify, reasons, short_reason
 
 fails = []
@@ -85,7 +86,7 @@ check("confidence outside 1-5 rejected", validate_decision({"ticker": "X", "acti
                                                             "confidence": 9, "thesis": "x"})[1] is not None)
 check("action must be buy or pass", validate_decision({"ticker": "X", "action": "short", "price": 5,
                                                        "confidence": 3, "thesis": "x"})[1] is not None)
-path = pathlib.Path(tempfile.mkdtemp()) / "j.json"
+path = FileStore(pathlib.Path(tempfile.mkdtemp()))
 append_decision(ok, path)
 p2, _ = validate_decision({"ticker": "NVDA", "action": "pass", "price": 100, "confidence": 2, "thesis": "too hot"})
 append_decision(p2, path)

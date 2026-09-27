@@ -13,7 +13,7 @@ from data.brief import brief_text, build_brief, watch_line
 from data.insider_feed import scan as insider_scan
 from data.paper_trades import add_signals, load_trades
 from data.screen import SECTORS
-from ui.desk_common import fmt_money
+from ui.desk_common import fmt_money, shared_store
 from ui.desk_portfolio import portfolio_snapshot
 
 CARD_COLOUR = {"insider": "#1F4E8C", "target": "#6A1B9A", "gap": "#8C2F39", "your_call": "#8A6014",
@@ -45,7 +45,7 @@ def as_of_label(premarket: pd.DataFrame) -> str:
 
 def render_brief(result, groups, holdings, frames, premarket) -> None:
     st.markdown(BRIEF_CSS, unsafe_allow_html=True)
-    pending = [t for t in load_trades() if t.status == "pending"]
+    pending = [t for t in load_trades(shared_store()) if t.status == "pending"]
     brief = build_brief(result, groups, holdings, premarket, pending)
     as_of = as_of_label(premarket)
 
@@ -133,7 +133,7 @@ def render_insider_scan(result, frames) -> None:
             return
         bar.empty()
         st.session_state["insider_scan"] = found
-        added = add_signals(found)
+        added = add_signals(found, shared_store())
         st.success(f"{len(found)} insider purchase filing(s) in your stocks; {added} new paper trade(s) logged.")
     found = st.session_state.get("insider_scan")
     if found is None:

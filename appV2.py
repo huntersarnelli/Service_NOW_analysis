@@ -31,13 +31,16 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+from data.accounts import auth_configured, is_allowed
 from data.holdings import load_holdings
+from data.store import FileStore, shared_store, supabase_settings, user_store
 from data.market import get_data_batch, get_earnings_batch
 from data.market_pulse import pulse_tickers, relative_strength_table
 from data.premarket import FUTURES, fetch_moves
 from data.scoreboard import log_buy_zone
 from data.screen import EVIDENCE, SCREENS, UNIVERSE_V2, run_screen
 from data.watchlists import all_watchlist_tickers, load_watchlists
+from ui.desk_account import render_not_invited, render_sign_in
 from ui.desk_more import render_more
 from ui.desk_portfolio import render_portfolio
 from ui.desk_brief import render_brief
@@ -117,7 +120,54 @@ def alpha_vantage_key() -> str:
     return key or (os.environ.get("ALPHA_VANTAGE_API_KEY") or "").strip()
 
 
+def app_secrets():
+    """st.secrets, or an empty dict when there is no secrets file (plain local run)."""
+    try:
+        _ = "x" in st.secrets
+        return st.secrets
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def sign_in_gate(secrets) -> None:
+    """Decide who this visitor is and give them their own store (in their session only).
+
+    Local mode (no [auth] in secrets): single user, files in portfolio_data/.
+    Cloud mode: Google sign-in, verified email, invite list, and a per-user Supabase
+    store. If sign-in is on but the database isn't configured, refuse to run rather
+    than let signed-in users share one set of local files.
+    """
+    if not auth_configured(secrets):
+        st.session_state["user_store"] = FileStore()
+        st.session_state["shared_store"] = FileStore()
+        st.session_state.pop("signed_in_email", None)
+        return
+    if supabase_settings(secrets) is None:
+        st.error("Sign-in is on but the database isn't configured (SUPABASE_URL / SUPABASE_SERVICE_KEY). "
+                 "Refusing to start so users can't see each other's data.")
+        st.stop()
+    if not st.user.is_logged_in:
+        render_sign_in()
+        st.stop()
+    email = str(st.user.get("email") or "").strip().lower()
+    if not email or st.user.get("email_verified") is False:
+        st.error("Your Google account's email isn't verified. Verify it with Google, then sign in again.")
+        if st.button("Sign out"):
+            st.logout()
+        st.stop()
+    shared = shared_store(secrets)
+    if not is_allowed(email, secrets, shared):
+        render_not_invited(email)
+        st.stop()
+    st.session_state["signed_in_email"] = email
+    st.session_state["user_store"] = user_store(email, secrets)
+    st.session_state["shared_store"] = shared
+
+
 def main() -> None:
+    secrets = app_secrets()
+    sign_in_gate(secrets)
+    user, shared = st.session_state["user_store"], st.session_state["shared_store"]
     with st.sidebar:
         st.title("🎯 Deployment Desk")
         st.caption("Where new money goes. Never tells you to sell — no exit rule survived testing.")
@@ -129,8 +179,8 @@ def main() -> None:
         st.markdown(f"<div class='stamp'>{datetime.now().strftime('%Y-%m-%d %H:%M')}</div>",
                     unsafe_allow_html=True)
 
-    groups = load_watchlists()
-    holdings = load_holdings()
+    groups = load_watchlists(user)
+    holdings = load_holdings(user)
     # Screened: the calibrated 124 + your lists + holdings + anything looked up this session.
     # Breadth stays on the 124. The core set and your personal set are downloaded and cached
     # separately, so editing a list only fetches your stocks, not all ~150.
@@ -151,7 +201,8 @@ def main() -> None:
     if not result.rows:
         st.error("Not enough history to run the screen.")
         st.stop()
-    log_buy_zone([r for r in result.rows if r["qualifies"]])  # every buy-zone signal is scored later on the Track record tab
+    # Every buy-zone signal in the core universe is logged (shared) and scored on Track record.
+    log_buy_zone([r for r in result.rows if r["qualifies"] and r["ticker"] in UNIVERSE_V2], shared)
     pulse_table = relative_strength_table(frames, benchmark=BENCHMARK)
     mine = all_watchlist_tickers(groups) + [h.ticker for h in holdings]
     premarket = cached_premarket(tuple(dict.fromkeys(mine + list(FUTURES))))
@@ -168,7 +219,7 @@ def main() -> None:
     with tabs[4]:
         render_track(frames)
     with tabs[5]:
-        render_more(result, SPEC, pulse_table)
+        render_more(result, SPEC, pulse_table, secrets)
 
 
 if __name__ == "__main__":

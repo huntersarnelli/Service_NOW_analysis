@@ -9,8 +9,6 @@ that fills in each decision's return vs QQQ at 20 and 60 trading days.
 
 from __future__ import annotations
 
-import json
-import os
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime
@@ -20,7 +18,7 @@ from typing import Optional
 import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-JOURNAL_PATH = REPO_ROOT / "portfolio_data" / "journal.json"
+JOURNAL_DOC = "journal"
 ACTIONS = ("buy", "pass")
 
 
@@ -71,31 +69,20 @@ def validate_decision(raw: dict) -> tuple[Optional[Decision], Optional[str]]:
     ), None
 
 
-def load_journal(path: Path = JOURNAL_PATH) -> list[Decision]:
-    path = Path(path)
-    if not path.exists():
-        return []
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return []
+def load_journal(store) -> list[Decision]:
+    payload = store.get(JOURNAL_DOC) or {}
     out = []
-    for record in payload.get("decisions", []) if isinstance(payload, dict) else []:
+    for record in payload.get("decisions", []):
         decision, error = validate_decision(record) if isinstance(record, dict) else (None, "bad")
         if decision and not error:
             out.append(decision)
     return out
 
 
-def append_decision(decision: Decision, path: Path = JOURNAL_PATH) -> None:
-    decisions = load_journal(path) + [decision]
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"schema": 1, "updated_at": datetime.now().isoformat(timespec="seconds"),
-               "decisions": [asdict(d) for d in decisions]}
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    os.replace(tmp, path)
+def append_decision(decision: Decision, store) -> None:
+    decisions = load_journal(store) + [decision]
+    store.put(JOURNAL_DOC, {"schema": 1, "updated_at": datetime.now().isoformat(timespec="seconds"),
+                            "decisions": [asdict(d) for d in decisions]})
 
 
 def journal_frame(decisions: list[Decision]) -> pd.DataFrame:

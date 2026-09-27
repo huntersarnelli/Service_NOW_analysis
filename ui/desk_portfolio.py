@@ -10,7 +10,6 @@ import pandas as pd
 import streamlit as st
 
 from data.holdings import (
-    HOLDINGS_PATH,
     frame_to_holdings,
     holdings_to_frame,
     hypothetical_drawdown,
@@ -20,7 +19,7 @@ from data.holdings import (
 )
 from data.portfolio import get_store
 from data.screen import SECTORS, effective_bets
-from ui.desk_common import GREEN, RED, fmt_money, last_close, previous_close, section
+from ui.desk_common import GREEN, RED, fmt_money, last_close, previous_close, section, user_store
 
 
 def portfolio_snapshot(holdings, frames) -> dict:
@@ -100,15 +99,15 @@ def render_editor(holdings) -> None:
             if problems:
                 st.error("Not saved — fix these first:\n\n- " + "\n- ".join(problems))
             else:
-                save_holdings(new_holdings)
+                save_holdings(new_holdings, user_store())
                 for note in notes:
                     st.info(note)
                 st.success(f"Saved {len(new_holdings)} holdings.")
                 st.rerun()
-        c2.caption(f"Saved locally in `{HOLDINGS_PATH.relative_to(HOLDINGS_PATH.parent.parent)}` "
-                   "(gitignored — never committed).")
+        c2.caption("Saved to your account (private to you)." if st.session_state.get("signed_in_email")
+                   else "Saved locally in portfolio_data/ (gitignored, never committed).")
 
-        if not holdings:
+        if not holdings and not st.session_state.get("signed_in_email"):
             try:
                 old_lots = get_store().load()
             except Exception:  # noqa: BLE001
@@ -116,7 +115,7 @@ def render_editor(holdings) -> None:
             if old_lots:
                 st.info(f"Found {len(old_lots)} lots in the old portfolio store (app.py).")
                 if st.button("⬇️ Import them as holdings (averages each ticker's lots)"):
-                    save_holdings(import_from_lots(old_lots))
+                    save_holdings(import_from_lots(old_lots), user_store())
                     st.rerun()
 
 

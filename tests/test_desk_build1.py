@@ -22,6 +22,7 @@ from data.market_pulse import leaders_and_laggards, relative_strength_table, win
 from data.portfolio import Lot
 from data.screen import SCREENS, RAW, run_screen
 from data.watchlists import clean_ticker_list, load_watchlists, save_watchlists, DEFAULT_WATCHLISTS
+from data.store import FileStore
 
 fails = []
 
@@ -38,9 +39,9 @@ tmp = pathlib.Path(tempfile.mkdtemp())
 valid, bad = clean_ticker_list("aapl, msft  nvda,, brk.b, $$$, AAPL")
 check("tickers are upper-cased, split and de-duplicated", valid == ["AAPL", "MSFT", "NVDA", "BRK.B"], str(valid))
 check("junk entries are rejected, not silently kept", bad == ["$$$"], str(bad))
-check("missing file -> starter groups", load_watchlists(tmp / "none.json") == DEFAULT_WATCHLISTS)
-save_watchlists({"Mine": ["AAPL", "CEG"]}, tmp / "w.json")
-check("watchlists round-trip", load_watchlists(tmp / "w.json") == {"Mine": ["AAPL", "CEG"]})
+check("nothing saved -> starter groups", load_watchlists(FileStore(tmp / "empty")) == DEFAULT_WATCHLISTS)
+save_watchlists({"Mine": ["AAPL", "CEG"]}, FileStore(tmp))
+check("watchlists round-trip", load_watchlists(FileStore(tmp)) == {"Mine": ["AAPL", "CEG"]})
 
 # ── 2. holdings ──────────────────────────────────────────────
 h, err = validate_holding({"ticker": " meta ", "shares": "10", "avg_price": 500})
@@ -56,8 +57,8 @@ check("blank rows ignored; duplicate ticker merged", len(holdings) == 2 and nvda
 check("merged average price is share-weighted", abs(nvda.avg_price - 175.0) < 1e-9, f"{nvda.avg_price}")
 check("merge is reported to the user", any("merged" in n for n in notes))
 
-save_holdings(holdings, tmp / "h.json")
-check("holdings round-trip", [(x.ticker, x.shares, x.avg_price) for x in load_holdings(tmp / "h.json")]
+save_holdings(holdings, FileStore(tmp))
+check("holdings round-trip", [(x.ticker, x.shares, x.avg_price) for x in load_holdings(FileStore(tmp))]
       == [(x.ticker, x.shares, x.avg_price) for x in holdings])
 
 lots = [Lot("AMD", 10, 100, "2024-01-02"), Lot("AMD", 10, 150, "2024-06-03", strategy="dip"),

@@ -15,7 +15,7 @@ from data.journal import load_journal
 from data.paper_trades import (BACKTEST_NEXT_DAY_EDGE, BACKTEST_SAME_DAY_EDGE, fill_outcomes,
                                load_trades, save_trades, summary, trades_frame)
 from data.scoreboard import MIN_CALLS_FOR_VERDICT, build_calls, load_buy_zone_log, score_table, summarise
-from ui.desk_common import GREEN, RED, section
+from ui.desk_common import GREEN, RED, section, shared_store, user_store
 
 
 def signed_colour(v):
@@ -32,7 +32,7 @@ def render_track(frames) -> None:
         f"avoided a laggard). Judge nothing before ~{MIN_CALLS_FOR_VERDICT} scored calls — "
         "below that, luck dominates."
     )
-    calls = build_calls(load_journal(), load_buy_zone_log())
+    calls = build_calls(load_journal(user_store()), load_buy_zone_log(shared_store()))
     if not calls:
         st.info("No calls yet. Log Buy / Pass on 🟠 Your call stocks (Watchlist tab); "
                 "🟢 Buy-zone signals are logged automatically whenever the app runs.")
@@ -62,12 +62,12 @@ def render_track(frames) -> None:
         f"**+{BACKTEST_NEXT_DAY_EDGE:.2f}pp** to the next-day close. If ~30 live trades land near "
         "that, the edge is real enough to consider real money; if near zero, it was a backtest artefact."
     )
-    trades = load_trades()
+    trades = load_trades(shared_store())
     if not trades:
         st.info("No paper trades yet — run the insider scan on the Today tab (evening or before 9:30 ET).")
         return
     if fill_outcomes(trades, frames):
-        save_trades(trades)
+        save_trades(trades, shared_store())
     s = summary(trades)
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Logged", s["n_logged"])

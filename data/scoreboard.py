@@ -14,8 +14,6 @@ not, so read it as optimistic.
 
 from __future__ import annotations
 
-import json
-import os
 from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
@@ -23,7 +21,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-BUY_ZONE_LOG_PATH = Path(__file__).resolve().parent.parent / "portfolio_data" / "buy_zone_log.json"
+BUY_ZONE_DOC = "buy_zone_log"
 HORIZONS = (20, 60)
 BENCHMARK = "QQQ"
 MIN_CALLS_FOR_VERDICT = 30
@@ -32,19 +30,14 @@ MIN_CALLS_FOR_VERDICT = 30
 # ─────────────────────────────────────────────────────────────
 # Buy-zone signal log (written automatically by the app)
 # ─────────────────────────────────────────────────────────────
-def load_buy_zone_log(path: Path = BUY_ZONE_LOG_PATH) -> list[dict]:
-    path = Path(path)
-    if not path.exists():
-        return []
-    try:
-        return json.loads(path.read_text(encoding="utf-8")).get("signals", [])
-    except (json.JSONDecodeError, OSError):
-        return []
+def load_buy_zone_log(store) -> list[dict]:
+    """Buy-zone signals — kept in the SHARED store (the screen is the same for everyone)."""
+    return (store.get(BUY_ZONE_DOC) or {}).get("signals", [])
 
 
-def log_buy_zone(qualifying_rows: list[dict], path: Path = BUY_ZONE_LOG_PATH) -> int:
+def log_buy_zone(qualifying_rows: list[dict], store) -> int:
     """Record today's buy-zone stocks once per (ticker, bar date). Returns how many were new."""
-    signals = load_buy_zone_log(path)
+    signals = load_buy_zone_log(store)
     known = {(s["ticker"], s["date"]) for s in signals}
     added = 0
     for r in qualifying_rows:
@@ -55,12 +48,8 @@ def log_buy_zone(qualifying_rows: list[dict], path: Path = BUY_ZONE_LOG_PATH) ->
         known.add((r["ticker"], bar))
         added += 1
     if added:
-        path = Path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".json.tmp")
-        tmp.write_text(json.dumps({"schema": 1, "updated_at": datetime.now().isoformat(timespec="seconds"),
-                                   "signals": signals}, indent=2), encoding="utf-8")
-        os.replace(tmp, path)
+        store.put(BUY_ZONE_DOC, {"schema": 1, "updated_at": datetime.now().isoformat(timespec="seconds"),
+                                 "signals": signals})
     return added
 
 

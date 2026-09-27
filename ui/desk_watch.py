@@ -19,7 +19,7 @@ from data.brief import watch_rows
 from data.signals import BUY_ZONE, NEAR, STATUS_LABEL, YOUR_CALL, classify, move_vs_market, short_reason
 from data.tickers import label, ticker_names
 from data.watchlists import WANT_TO_BUY, load_watchlists, save_watchlists
-from ui.desk_common import section
+from ui.desk_common import section, user_store
 
 FAR_PCT = 10.0  # the bar is empty at 10% or more above the dip price
 ALL, HOLDINGS = "All my stocks", "Holdings"
@@ -37,9 +37,9 @@ def ticker_options(names: dict[str, str], extra: list[str]) -> list[str]:
 
 def save_list_from_widget(list_name: str, widget_key: str) -> None:
     """on_change callback: the multiselect's current value becomes the saved list."""
-    groups = load_watchlists()
+    groups = load_watchlists(user_store())
     groups[list_name] = [str(t).strip().upper() for t in st.session_state[widget_key] if str(t).strip()]
-    save_watchlists(groups)
+    save_watchlists(groups, user_store())
 
 
 def open_in_stock_tab(ticker: str) -> None:
@@ -112,7 +112,7 @@ def render_watch(result, groups, holdings, frames) -> None:
                 on_change=save_list_from_widget, args=(choice, key),
             )
             if st.button(f"Delete the “{choice}” list", key="delete_list"):
-                save_watchlists({g: t for g, t in groups.items() if g != choice})
+                save_watchlists({g: t for g, t in groups.items() if g != choice}, user_store())
                 st.session_state.pop("list_choice", None)
                 st.session_state.pop(f"edit_list::{choice}", None)
                 st.rerun()
@@ -122,7 +122,7 @@ def render_watch(result, groups, holdings, frames) -> None:
                              placeholder="e.g. Dividend payers")
         if c2.button("Create", key="create_list", width="stretch"):
             if name.strip() and name.strip() not in groups:
-                save_watchlists({**groups, name.strip(): []})
+                save_watchlists({**groups, name.strip(): []}, user_store())
                 st.session_state.pop("new_list_name", None)
                 st.rerun()
 

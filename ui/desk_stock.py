@@ -25,7 +25,7 @@ from data.screen import add_screen_indicators
 from data.signals import BASE_RATE, BUY_ZONE, NEAR, YOUR_CALL, cause, classify, reasons, short_reason
 from data.tickers import label
 from data.watchlists import WANT_TO_BUY, save_watchlists, toggle_want_to_buy
-from ui.desk_common import AMBER, GREEN, GREY, fmt_money, verdict_card
+from ui.desk_common import AMBER, GREEN, GREY, fmt_money, user_store, verdict_card
 from ui.desk_watch import cached_names, ticker_options
 
 STATUS = {BUY_ZONE: ("🟢 Buy zone", GREEN, "Passes every evidence rule: the market dragged it down, "
@@ -99,7 +99,7 @@ def render_header(row, groups) -> None:
     verdict_card(f"{ticker} · {title}", sub, colour)
     starred = ticker in groups.get(WANT_TO_BUY, [])
     if st.button("★ Remove from Want to buy" if starred else "⭐ Add to Want to buy", key="star_button"):
-        save_watchlists(toggle_want_to_buy(groups, ticker))
+        save_watchlists(toggle_want_to_buy(groups, ticker), user_store())
         st.session_state.pop("edit_want_to_buy", None)  # let the Watchlist box pick up the change
         st.rerun()
 
@@ -161,5 +161,5 @@ def render_decision_form(row) -> None:
             if error:
                 st.error(error)
             else:
-                append_decision(decision)
+                append_decision(decision, user_store())
                 st.success(f"Logged {action.upper()} {row['ticker']} at {fmt_money(row['close'])}.")
