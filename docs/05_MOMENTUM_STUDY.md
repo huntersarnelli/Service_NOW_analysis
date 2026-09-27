@@ -1,7 +1,7 @@
 # 05 — Momentum as a holding rule
 
-**Status:** PRE-REGISTRATION. The rules below were written and committed **before any
-momentum return was computed**. Results are appended later in §6; §1–§5 do not change.
+**Status:** COMPLETE — **FAIL** (t = 1.80 vs 2.0; see §6). The rules in §1–§5 were committed
+(2cd3cde) **before any momentum return was computed** and were not changed afterwards.
 
 ---
 
@@ -89,4 +89,60 @@ any real money follows it.
 
 ## 6. Results
 
-*(Appended after the run. Nothing above this line changes.)*
+*(Appended after the run on 27 Sep 2026. Nothing above this line changed.)*
+
+### **Verdict: FAIL.** A big but unreliable edge: t = 1.80 against a bar of 2.0 (`studies/results/12_momentum/criteria.csv`).
+
+| Criterion (top 20 of 200, 2006-01 to 2026-08, net of costs, vs random) | Result | Pass |
+|---|---|---|
+| Mean monthly edge ≥ +0.25pp | **+0.70pp** | ✅ |
+| t ≥ 2.0 | **1.80** | ❌ |
+| Positive in both halves | +0.04 / +1.36 | ✅ (the first half is ≈ 0) |
+| ≥ 120 months | 248 | ✅ |
+
+**Where the edge comes from** (`summary.csv`, `edge_by_year.csv`, `monthly_primary.csv`):
+- **Concentrated in a few years.** By year, the average monthly edge was:
+
+  | Year | Edge per month |
+  |---|---|
+  | 2020 | **+7.0pp** (pandemic winners: TSLA, TTD, ROKU, AMD, NVAX) |
+  | 2024 | +4.0pp |
+  | 2025 | +2.5pp |
+  | 2026 | +3.9pp (AI, quantum and nuclear leaders) |
+  | 2006 | −1.2pp |
+  | 2009 | −1.8pp (the classic momentum crash) |
+  | 2021 | −3.3pp |
+
+- **Excluding 2020:** +0.38pp a month, **t = 1.0**. The median month is +0.41pp, and 54% of months beat random portfolios.
+- **The first half (2006–2016) shows essentially no edge** (+0.04pp a month). The second half does (+1.36pp).
+
+**What it's like to hold** (`summary.csv`, `worst_months.csv`):
+- **Returns:** 16.4% a year after costs, against 11.1% for SPY. Against SPY that's +0.69pp a month; against QQQ, +0.30pp.
+- **Worst drop: −62%**, against −51% for SPY and −54% for the equal-weight universe.
+- **Crash months,** relative to the equal-weight universe:
+  - one recent month lost 25.6% while the market was flat (−22pp relative);
+  - October 2025 −15.8pp;
+  - November 2021 −15.3pp;
+  - March 2009 −12.7pp.
+- **Turnover:** 35% a month.
+
+**Exploratory results** (these can't rescue the fail):
+
+| Variant | Edge per month | t |
+|---|---|---|
+| Top 10 | +1.14pp | 2.09 |
+| Top 30 | +0.41pp | 1.32 |
+| 2013 onward | +1.12pp | 2.11 |
+| 2020 onward | +2.12pp | 2.06 |
+| 124 Desk names (hindsight-biased) | +0.34pp | 1.55 |
+
+Choosing whichever variant clears the bar after seeing results is exactly what pre-registration rules out.
+
+**Data:** 5,460 cached stocks, of which 489 were excluded by the bad-print screen (`data_log.csv`). Spot-checked holdings in the extreme months were real names with plausible moves (e.g. TSLA +49% and TTD +52% in April 2020; RGTI +49% and QBTS +50% in October 2025).
+
+### What this means
+
+- **Not a reliable edge.** Momentum made money on average in this sample, but the result rests on a handful of speculative boom years. It has no measurable edge in 2006–2016 and crashes hard when leadership flips. The survivor bias in this data (§2) flatters momentum, and it *still* failed the bar.
+- **The recent strength is real but regime-dependent.** Since 2020 it has ridden the pandemic, AI, quantum and nuclear leaders. That matches "where the market is looking", but that's a description of the recent past, not a rule that has held over time.
+- **Dashboard:** the Market tab stays **information only**. No momentum tilt is added.
+- **If revisited:** a fresh pre-registration on data that includes delisted stocks (e.g. CRSP), with a crash-protection rule defined in advance (for example, volatility scaling as in Barroso & Santa-Clara 2015). Don't re-run this data with tweaked settings.

@@ -2,10 +2,10 @@
 Market pulse — "where is the market looking?"
 
 Ranks sector and theme funds by how much they have beaten (or lagged) SPY over
-1, 3, 6 and 12 months. This is INFORMATION ONLY: momentum as a holding rule has
-not yet been tested in this repo (docs/DEAD_ENDS.md #3 killed momentum as a
-*gate on dips*, which is a different thing). Until a pre-registered study says
-otherwise, nothing here is a buy signal.
+1, 3, 6 and 12 months. This is INFORMATION ONLY: momentum as a holding rule was
+tested (docs/05_MOMENTUM_STUDY.md, pre-registered) and failed narrowly (t 1.80),
+and momentum as a gate on dips failed earlier (DEAD_ENDS #3). Nothing here is a
+buy signal.
 """
 
 from __future__ import annotations

@@ -25,10 +25,10 @@ def render_pulse(pulse_table: pd.DataFrame) -> None:
         "points. Green = beating the market, red = lagging it."
     )
     st.warning(
-        "**Information only, not a signal.** Momentum as a holding rule has not "
-        "been tested in this repo yet. What was tested — using momentum to gate "
-        "dip entries — failed (Evidence tab). Use this to see where money is "
-        "flowing, not as a reason to buy."
+        "**Information only, not a signal.** Momentum was tested as a holding rule "
+        "(docs/05_MOMENTUM_STUDY.md) and **failed narrowly**: +0.7pp/month vs random "
+        "stocks but not reliable (t 1.80), mostly from 2020 and the AI boom, with a −62% "
+        "worst drop. Use this to see where money is flowing, not as a reason to buy."
     )
     if pulse_table is None or pulse_table.empty:
         st.info("No fund data returned. Yahoo throttles heavily — try Refresh in a minute.")

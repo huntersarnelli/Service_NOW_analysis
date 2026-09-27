@@ -69,6 +69,8 @@ def render_howto() -> None:
         {"Idea": "Model-based position sizing", "Result": "Just a volatility bet in disguise"},
         {"Idea": "Cap per stock", "Result": "Costs return, no risk benefit"},
         {"Idea": "Insider buying → hold tech for weeks (insider-trading repo, H8)", "Result": "No edge"},
+        {"Idea": "Momentum: hold last year's top 20 (pre-registered, 2006–2026)", "Result": "Failed narrowly (t 1.80): "
+         "edge mostly from 2020 and the AI boom; worst drop −62%"},
     ]), width="stretch", hide_index=True)
 
     section("What this is worth")
