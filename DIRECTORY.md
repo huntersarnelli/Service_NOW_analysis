@@ -74,10 +74,11 @@ Read them in order; each one answers a question the previous one raised.
 ## `ui/` — `app.py` tab renderers
 
 `portfolio_tab.py` (positions, entry markers, trailing-stop path) and
-`media_earnings_tab.py` for `app.py`. For `appV2.py` (five tabs): `desk_today.py`,
-`desk_stocks.py` (watchlists + screen + your-call panel + decision log),
-`desk_portfolio.py`, `desk_track.py` (Track record), `desk_market.py` (+ `desk_pulse.py`), `desk_howto.py`,
-and `desk_common.py` helpers.
+`media_earnings_tab.py` for `app.py`. For `appV2.py` (five tabs): `desk_brief.py` (Brief),
+`desk_watch.py` (Watchlist: ⭐ want-to-buy bars, your stocks, click-to-open detail, list manager),
+`desk_portfolio.py`, `desk_track.py` (Track record + decision log), `desk_more.py`
+(= `desk_market.py` + `desk_pulse.py` + `desk_howto.py`), and `desk_common.py` helpers.
+Also `data/premarket.py` (extended-hours moves) and `data/brief.py` (the to-do list).
 
 ---
 

@@ -34,7 +34,7 @@ def render_track(frames) -> None:
     )
     calls = build_calls(load_journal(), load_buy_zone_log())
     if not calls:
-        st.info("No calls yet. Log Buy / Pass on 🟠 Your call stocks (Stocks tab); "
+        st.info("No calls yet. Log Buy / Pass on 🟠 Your call stocks (Watchlist tab); "
                 "🟢 Buy-zone signals are logged automatically whenever the app runs.")
     else:
         table = score_table(calls, frames)
@@ -46,7 +46,7 @@ def render_track(frames) -> None:
             }, na_rep="—"),
             width="stretch", hide_index=True,
         )
-        with st.expander(f"Every call ({len(table)})"):
+        with st.expander(f"📓 Decision log: every call and signal ({len(table)})"):
             st.dataframe(
                 table.style.format({"20d vs QQQ": "{:+.2f}pp", "60d vs QQQ": "{:+.2f}pp"}, na_rep="—")
                 .map(signed_colour, subset=["20d vs QQQ", "60d vs QQQ"]),

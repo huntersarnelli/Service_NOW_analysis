@@ -304,8 +304,9 @@ data/    screen.py (the live rules) · advisor.py (LLM) · market · portfolio
          strategies (A/B) · media_earnings (informational only)
          holdings · watchlists · market_pulse · signals · news · journal
          scoreboard · insider_feed · paper_trades · sec_client (Desk v3)
-ui/      desk_*.py — appV2's six tabs: Today · Stocks · Portfolio · Track record ·
-         Market · How it works
+ui/      desk_*.py — appV2's five tabs: Brief · Watchlist · Portfolio ·
+         Track record · More (market + how it works). The AI advisor is no
+         longer shown (data/advisor.py kept, never backtested).
 studies/ dip_backtest.py (portfolio engine) · overreaction_lib.py (event study)
          run_*.py × 13 · results/<nn>_<name>/ (97 CSVs, committed on purpose)
 tests/   121 checks, synthetic fixtures, no network

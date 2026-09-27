@@ -6,7 +6,6 @@ The same brief (data/brief.py) will be sent to Telegram at 8:45am ET.
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 import streamlit as st
 
@@ -44,7 +43,7 @@ def as_of_label(premarket: pd.DataFrame) -> str:
     return f"{latest:%a %b %d, %I:%M %p} ET · {session}"
 
 
-def render_brief(result, qualifying, cash, max_names, groups, holdings, frames, premarket) -> None:
+def render_brief(result, groups, holdings, frames, premarket) -> None:
     st.markdown(BRIEF_CSS, unsafe_allow_html=True)
     pending = [t for t in load_trades() if t.status == "pending"]
     brief = build_brief(result, groups, holdings, premarket, pending)
@@ -78,11 +77,9 @@ def render_brief(result, qualifying, cash, max_names, groups, holdings, frames, 
             st.caption("Dips are judged on the close: a stock below its dip price at 3:30pm triggers only "
                        "if it's still there at 4pm. Add or remove stocks with ⭐ in the Stocks tab.")
         st.caption("🟢 tested rule · ⚡ tested in tech, paper only · 🟠 your judgement, logged · "
-                   "🎯🔻🔺📅 information. Open a stock in **Stocks** for its chart and headlines.")
+                   "🎯🔻🔺📅 information. Open a stock in **Watchlist** for its chart and headlines.")
 
         render_your_stocks_now(groups, holdings, premarket)
-        if qualifying:
-            render_buy_zone(qualifying, cash, max_names)
         with st.expander("⚡ Scan SEC filings for insider buys"):
             render_insider_scan(result, frames)
         if holdings:
@@ -112,18 +109,6 @@ def render_your_stocks_now(groups, holdings, premarket) -> None:
         )
         st.caption("Move = latest price vs the last regular close. Pre-market moves are information, "
                    "not a tested signal.")
-
-
-def render_buy_zone(qualifying, cash, max_names) -> None:
-    picks = qualifying[:max_names]
-    per = cash / len(picks)
-    with st.expander(f"🟢 How to split {fmt_money(cash)} of new cash"):
-        st.dataframe(
-            pd.DataFrame([{"Stock": p["ticker"], "Price": p["close"], "Invest": per,
-                           "Shares (approx)": per / p["close"] if p["close"] else np.nan} for p in picks])
-            .style.format({"Price": "${:,.2f}", "Invest": "${:,.2f}", "Shares (approx)": "{:,.3f}"}),
-            width="stretch", hide_index=True,
-        )
 
 
 def render_insider_scan(result, frames) -> None:

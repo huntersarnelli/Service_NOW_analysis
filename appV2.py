@@ -2,16 +2,16 @@
 Deployment Desk — the interface for the strategy that survived the studies.
 ==========================================================================
 
-Six tabs, in the order you'd use them:
+Five tabs, in the order you'd use them:
 
-  Brief         the morning to-do list (phone-first): insider paper buys,
-                pre-market moves in your stocks, your calls, buy zone, earnings
-  Stocks        your watchlists / holdings / the whole screen with a plain-English
-                status; open a stock for its chart, headlines and a Buy/Pass log
+  Brief         the to-do list (phone-first): insider paper buys, want-to-buy
+                crossings, big moves in your stocks, your calls, buy zone, earnings
+  Watchlist     ⭐ want-to-buy progress bars + your stocks; click one for its
+                chart, headlines and (for 🟠 Your call) a Buy / Pass log
   Portfolio     ticker / shares / average price, value, gain, risk
   Track record  your calls, buy-zone signals and insider paper trades, scored
-  Market        how many stocks are falling; sector leadership (information only)
-  How it works  glossary, statuses, the evidence, and what failed
+  More          market breadth and sector leadership (information only) and
+                how it works: glossary, evidence, what failed
 
 Statuses: 🟢 Buy zone (evidence-backed) · 🟠 Your call (your judgement, logged
 and scored) · 👀 Close to a dip. The app never tells you to sell -- no exit rule
@@ -36,10 +36,9 @@ from data.premarket import FUTURES, fetch_moves
 from data.scoreboard import log_buy_zone
 from data.screen import EVIDENCE, SCREENS, UNIVERSE_V2, run_screen
 from data.watchlists import all_watchlist_tickers, load_watchlists
-from ui.desk_howto import render_howto
-from ui.desk_market import render_market
-from ui.desk_portfolio import render_concentration, render_portfolio
-from ui.desk_stocks import render_stocks
+from ui.desk_more import render_more
+from ui.desk_portfolio import render_portfolio
+from ui.desk_watch import render_watch
 from ui.desk_brief import render_brief
 from ui.desk_track import render_track
 
@@ -54,7 +53,7 @@ st.set_page_config(
     page_title="Deployment Desk",
     page_icon="🎯",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 st.markdown(
@@ -120,15 +119,6 @@ def main() -> None:
         st.title("🎯 Deployment Desk")
         st.caption("Where new money goes. Never tells you to sell — no exit rule survived testing.")
         st.divider()
-        cash = st.number_input("Cash to invest ($)", min_value=0.0, max_value=10_000_000.0,
-                               value=1_000.0, step=250.0, format="%.0f")
-        max_names = st.slider("Split across at most", 1, 10, 4,
-                              help="Cash is split equally across the top buy-zone stocks.")
-        drawdown_limit = st.number_input(
-            "Drop you can sit through without selling (%)", min_value=5.0, max_value=90.0,
-            value=35.0, step=5.0, format="%.0f",
-            help="Used by the Portfolio risk panel. Tech-only fell 51% in testing; a mixed basket 30%.")
-        st.divider()
         if st.button("↻ Refresh market data", width="stretch"):
             cached_frames.clear()
             cached_premarket.clear()
@@ -153,27 +143,22 @@ def main() -> None:
     if not result.rows:
         st.error("Not enough history to run the screen.")
         st.stop()
-    qualifying = [r for r in result.rows if r["qualifies"]]
-    log_buy_zone(qualifying)  # every buy-zone signal is scored later on the Track record tab
+    log_buy_zone([r for r in result.rows if r["qualifies"]])  # every buy-zone signal is scored later on the Track record tab
     pulse_table = relative_strength_table(frames, benchmark=BENCHMARK)
     mine = all_watchlist_tickers(groups) + [h.ticker for h in holdings]
     premarket = cached_premarket(tuple(dict.fromkeys(mine + list(FUTURES))))
 
-    tabs = st.tabs(["☀️ Brief", "📋 Stocks", "📁 Portfolio", "📊 Track record", "🧭 Market",
-                    "📐 How it works"])
+    tabs = st.tabs(["☀️ Brief", "⭐ Watchlist", "📁 Portfolio", "📊 Track record", "➕ More"])
     with tabs[0]:
-        render_brief(result, qualifying, cash, max_names, groups, holdings, frames, premarket)
+        render_brief(result, groups, holdings, frames, premarket)
     with tabs[1]:
-        render_stocks(result, SPEC, groups, holdings, frames, BENCHMARK, alpha_vantage_key())
+        render_watch(result, SPEC, groups, holdings, frames, BENCHMARK, alpha_vantage_key())
     with tabs[2]:
-        render_portfolio(holdings, frames, drawdown_limit)
-        render_concentration(frames, [h.ticker for h in holdings])
+        render_portfolio(holdings, frames)
     with tabs[3]:
         render_track(frames)
     with tabs[4]:
-        render_market(result, SPEC, pulse_table)
-    with tabs[5]:
-        render_howto()
+        render_more(result, SPEC, pulse_table)
 
 
 if __name__ == "__main__":
