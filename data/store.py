@@ -74,7 +74,8 @@ class SupabaseStore:
     TABLE = "user_docs"
 
     def __init__(self, url: str, key: str, owner: str, timeout: int = 15):
-        self.url = url.rstrip("/")
+        # Accept the project URL either bare or as Supabase's "Data API URL" (…/rest/v1).
+        self.url = url.strip().rstrip("/").removesuffix("/rest/v1").rstrip("/")
         self.owner = owner.strip().lower()
         self.timeout = timeout
         self.headers = {"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
