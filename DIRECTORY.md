@@ -57,14 +57,32 @@ Read them in order; each one answers a question the previous one raised.
 | **`screen.py`** | **The evidence-backed dip screen.** Every threshold traces to a measured result; the docstring carries the provenance table. | `appV2.py` |
 | **`advisor.py`** | Optional LLM advisory layer. Advisory only — never gates a signal, never backtested. | `appV2.py` |
 | `market.py` | Batched OHLCV download, indicators, live levels | both apps |
-| `portfolio.py` | Lot model + pluggable storage (`portfolio_data/lots.json`) | both apps |
+| `portfolio.py` | Lot model + pluggable storage (`portfolio_data/lots.json`) | `app.py` |
+| `holdings.py` | Simple portfolio: ticker, shares, average price (`portfolio_data/holdings.json`); imports old lots | `appV2.py` |
+| `watchlists.py` | Your named ticker groups (`portfolio_data/watchlists.json`). Screened, never counted in breadth | `appV2.py` |
+| `market_pulse.py` | Sector/theme funds vs SPY over 1–12 months. **Information only — not a tested signal.** | `appV2.py` |
+| `signals.py` | Plain-English status: 🟢 Buy zone / 🟠 Your call / 👀 Close to a dip, with reasons and base rates | `appV2.py` |
+| `news.py` | Headlines for your-call stocks (Alpha Vantage with sentiment, else Yahoo). **Never placeholders.** | `appV2.py` |
+| `journal.py` | Your Buy/Pass decisions on your-call stocks (`portfolio_data/journal.json`) | `appV2.py` |
+| `scoreboard.py` | Scores your calls + auto-logged buy-zone signals vs QQQ at 20/60 days | `appV2.py` |
+| `insider_feed.py` | Live SEC Form 4 scan with the H10 rules (insider-trading repo). **Paper trading only.** | `appV2.py` |
+| `paper_trades.py` | Insider paper-trade log; fills same-day / next-day outcomes vs SPY and QQQ | `appV2.py` |
+| `sec_client.py` | Polite SEC requests (User-Agent, 5 req/s, retries) | `insider_feed.py` |
 | `strategies.py` | Method A / Method B rule sets + open-lot evaluation | `app.py` |
 | `media_earnings.py` | News sentiment + earnings context. **Informational only — never gates a signal.** | `app.py` |
 
 ## `ui/` — `app.py` tab renderers
 
 `portfolio_tab.py` (positions, entry markers, trailing-stop path) and
-`media_earnings_tab.py`. `appV2.py` renders its own UI inline.
+`media_earnings_tab.py` for `app.py`. For `appV2.py` (five tabs): `desk_brief.py` (Brief),
+`desk_watch.py` (Watchlist: ⭐ want-to-buy autocomplete box + progress bars, your lists, list editing),
+`desk_stock.py` (Stock: search any ticker, chart 1M–1Y, status, headlines on request, Buy/Pass),
+`desk_portfolio.py`, `desk_track.py` (Track record + decision log), `desk_more.py`
+(= `desk_market.py` + `desk_pulse.py` + `desk_howto.py`), and `desk_common.py` helpers.
+Also `data/premarket.py` (extended-hours moves) and `data/brief.py` (the to-do list).
+`data/tickers.py` holds the SEC ticker→company directory used for autocomplete.
+
+**Multi-user / cloud (docs/DEPLOY.md):** `data/store.py` (FileStore locally, SupabaseStore in the cloud; per-user, never global), `data/accounts.py` (invite list, admin, settings), `data/telegram.py`, `ui/desk_account.py` (sign-in, Phone & alerts, Friends), `scripts/send_briefs.py` + `.github/workflows/desk-alerts.yml` (scheduled briefs/alerts), `scripts/migrate_local_to_cloud.py`.
 
 ---
 
@@ -110,6 +128,11 @@ Every number in `docs/` traces to a CSV here.
 ```bash
 python tests/test_backtest_engine.py           # 27 checks on the engine
 python tests/test_strategies_and_portfolio.py  # 28 checks on rules + storage
+python tests/test_desk_build1.py               # 19 checks: watchlists, holdings, pulse, breadth
+python tests/test_desk_signals.py              # 22 checks: statuses, headlines, journal
+python tests/test_desk_ui_logic.py             # 6 checks: autocomplete, default stock, sorting
+python tests/test_accounts.py                 # 17 checks: per-user storage, invites, Telegram, safety stop
+python tests/test_desk_build2.py               # 25 checks: SEC feed/Form 4, H10 rules, paper trades, scoreboard
 ```
 
 Synthetic fixtures with known answers. **No network needed.** The engine tests

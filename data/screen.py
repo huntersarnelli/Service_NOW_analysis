@@ -94,6 +94,11 @@ SECTORS = {
         "CAT", "DE", "BA", "HON", "GE", "UPS", "FDX", "LMT", "RTX", "UNP"]},
     **{t: "Energy / Materials" for t in [
         "XOM", "CVX", "COP", "SLB", "OXY", "NEE", "DUK", "LIN", "APD", "SHW"]},
+    # Starter-watchlist names outside UNIVERSE_V2 (data/watchlists.py). They are
+    # screened like any other name but never counted in breadth.
+    **{t: "Tech" for t in ["PLTR", "ANET"]},
+    **{t: "Energy / Materials" for t in ["CEG", "VST"]},
+    **{t: "Industrials" for t in ["GEV", "VRT"]},
 }
 
 
@@ -272,14 +277,18 @@ def run_screen(
     frames: dict[str, pd.DataFrame],
     earnings: dict[str, list],
     spec: ScreenSpec,
+    breadth_universe: Optional[list[str]] = None,
 ) -> ScreenResult:
     """
     Evaluate every name against the screen and return one row each.
 
-    Breadth is computed across the whole scanned universe on the latest common
-    bar, so it means the same thing it meant in the study: what fraction of
-    names are simultaneously below the Z threshold.
+    Breadth is the fraction of names simultaneously below the Z threshold. The
+    breadth_lo threshold was calibrated on UNIVERSE_V2, so breadth is computed
+    over breadth_universe only (default: UNIVERSE_V2). Extra names -- e.g. from
+    your watchlists -- are screened, but adding them cannot move breadth.
     """
+    if breadth_universe is None:
+        breadth_universe = UNIVERSE_V2
     enriched: dict[str, pd.DataFrame] = {}
     spy = frames.get(BENCHMARK)
     if spy is None or spy.empty:
@@ -294,7 +303,7 @@ def run_screen(
         return ScreenResult()
 
     z_now = {t: float(d["z"].iloc[-1]) for t, d in enriched.items()
-             if pd.notna(d["z"].iloc[-1])}
+             if t in breadth_universe and pd.notna(d["z"].iloc[-1])}
     n_scanned = len(z_now)
     n_dipping = sum(1 for v in z_now.values() if v < spec.z_entry)
     breadth = n_dipping / n_scanned if n_scanned else float("nan")

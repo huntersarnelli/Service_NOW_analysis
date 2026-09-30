@@ -33,6 +33,8 @@ survived a control.
 | 9 | Fixed-bar time exit (10/20/40/60/90/120 bars) | Worse than the trail at every setting, on all 6 universe × window combinations | `03_OPTIMISATION_STUDY.md` §2 |
 | 10 | Model-predicted position sizing (9-feature OLS) | Collapses into a **volatility tilt** — one feature (`rvol20`) alone captured 194% of the gain at 20d and 436% at 60d | §3 |
 | 11 | Per-name cumulative exposure cap | Sharpe flat from 5% to no cap; capping only costs return | `04_PORTFOLIO_STUDY.md` §3 |
+| 12 | Momentum as a holding rule (top 20 of the 200 most-traded stocks by 12-1 return, monthly, pre-registered) | **FAIL, narrowly:** +0.70pp a month vs random portfolios but **t = 1.80** (bar 2.0). About half the edge is from 2020 (excluding it: +0.38pp, t = 1.0); 2006–2016 ≈ 0; worst drop −62% vs −51% for SPY. Survivor bias flatters it and it still failed | `05_MOMENTUM_STUDY.md` §6 |
+| 13 | Insider buying → hold established tech for weeks (insider-trading repo, H8) | No edge: −0.22pp at 60 days (t −0.24), 1,125 events | insider-trading `docs/01_INSIDER_STUDY.md` §5 |
 
 ### The two mistakes worth remembering
 

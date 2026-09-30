@@ -233,6 +233,22 @@ slightly more efficient; it does not make it safe and it is not a return engine.
 
 ---
 
+### Deployment Desk v3 (Sep 2026) — the "Your call" lane
+
+Dips the rules skip (company news, just after earnings, falling alone) are no
+longer hidden: they show as 🟠 **Your call** with headlines, the historical base
+rate, and a Buy/Pass log (`data/journal.py`). The owner's view: a rule cannot
+read a headline (the META lawsuit dip was a correct overreaction call). The
+data's view: these drift lower on average. The journal settles it — score the
+owner's calls vs QQQ after ~30 decisions before trusting either.
+
+**Build 2 (Track record tab):** your buys, your passes and every auto-logged
+buy-zone signal are scored vs QQQ at 20/60 trading days. The **insider fast
+trade** (insider-trading repo H10: buy at the first open after an insider-purchase
+filing, hold ≤1 day; +0.48pp same day / +0.69pp next close vs SPY in tech,
+t≈3) is live as a **paper-trading** scan on the Today tab. The SEC live feed only
+holds ~the last business day, so scan every evening or morning.
+
 ## 5. The graveyard — do not re-propose these
 
 Eleven interventions, all tested with out-of-sample or null controls, all failed.
@@ -286,9 +302,14 @@ docs/    01_STRATEGY_REVIEW · 02_OVERREACTION_STUDY · 03_OPTIMISATION_STUDY
          04_PORTFOLIO_STUDY · DEAD_ENDS · legacy_*
 data/    screen.py (the live rules) · advisor.py (LLM) · market · portfolio
          strategies (A/B) · media_earnings (informational only)
+         holdings · watchlists · market_pulse · signals · news · journal
+         scoreboard · insider_feed · paper_trades · sec_client (Desk v3)
+ui/      desk_*.py — appV2's six tabs: Brief · Watchlist · Stock · Portfolio ·
+         Track record · More (market + how it works). The AI advisor is no
+         longer shown (data/advisor.py kept, never backtested).
 studies/ dip_backtest.py (portfolio engine) · overreaction_lib.py (event study)
          run_*.py × 13 · results/<nn>_<name>/ (97 CSVs, committed on purpose)
-tests/   55 checks, synthetic fixtures, no network
+tests/   121 checks, synthetic fixtures, no network
 ```
 
 ```bash

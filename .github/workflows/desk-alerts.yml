@@ -1,0 +1,60 @@
+# Scheduled Deployment Desk briefs and alerts (scripts/send_briefs.py).
+# GitHub cron is in UTC and can run a few minutes late. Each ET slot is listed at two
+# UTC times (EDT and EST); the script's --at window makes the wrong one exit quietly.
+# Secrets needed (repo Settings → Secrets and variables → Actions):
+#   SUPABASE_URL, SUPABASE_SERVICE_KEY, TELEGRAM_BOT_TOKEN, SEC_USER_AGENT
+
+name: desk-alerts
+
+on:
+  schedule:
+    - cron: "30 12 * * 1-5"      # morning   08:30 ET (EDT)
+    - cron: "30 13 * * 1-5"      # morning   08:30 ET (EST)
+    - cron: "30 19 * * 1-5"      # afternoon 15:30 ET (EDT)
+    - cron: "30 20 * * 1-5"      # afternoon 15:30 ET (EST)
+    - cron: "5,35 13-20 * * 1-5" # crossings every 30 min (script checks market hours)
+    - cron: "30 22 * * 1-5"      # insider   18:30 ET (EDT)
+    - cron: "30 23 * * 1-5"      # insider   18:30 ET (EST)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "morning, afternoon, crossings or insider"
+        required: true
+        default: morning
+      force:
+        description: "Ignore time window / already-sent checks"
+        type: boolean
+        default: true
+
+concurrency:
+  group: desk-alerts
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Pick the mode for this run
+        id: pick
+        run: |
+          case "${{ github.event.schedule }}" in
+            "30 12 * * 1-5"|"30 13 * * 1-5") echo "args=morning --at 08:30" >> "$GITHUB_OUTPUT" ;;
+            "30 19 * * 1-5"|"30 20 * * 1-5") echo "args=afternoon --at 15:30" >> "$GITHUB_OUTPUT" ;;
+            "5,35 13-20 * * 1-5")           echo "args=crossings" >> "$GITHUB_OUTPUT" ;;
+            "30 22 * * 1-5"|"30 23 * * 1-5") echo "args=insider --at 18:30" >> "$GITHUB_OUTPUT" ;;
+            *) echo "args=${{ inputs.mode }} ${{ inputs.force && '--force' || '' }}" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - name: Send
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+        run: python scripts/send_briefs.py ${{ steps.pick.outputs.args }}
