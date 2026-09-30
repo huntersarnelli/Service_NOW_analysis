@@ -6,6 +6,8 @@ plus 👥 Friends for admins (the invite list).
 
 from __future__ import annotations
 
+from urllib.parse import quote, urlparse
+
 import streamlit as st
 
 from data.accounts import (DEFAULT_ALERTS, EMAIL_RE, admin_emails, load_invites, load_settings,
@@ -21,7 +23,23 @@ ALERT_LABELS = {
 }
 
 
-def render_sign_in() -> None:
+def provider_logout_url(secrets) -> str | None:
+    """Auth0 keeps its own login session in the browser, so after a sign-in with the wrong
+    account every new sign-in silently reuses it. This URL clears that session and returns
+    to the Desk. (None if the provider isn't Auth0.)"""
+    try:
+        auth = secrets["auth"]
+        host = urlparse(str(auth["server_metadata_url"])).netloc
+        back = urlparse(str(auth["redirect_uri"]))
+    except Exception:  # noqa: BLE001
+        return None
+    if not host.endswith(".auth0.com"):
+        return None
+    return_to = quote(f"{back.scheme}://{back.netloc}", safe="")
+    return f"https://{host}/v2/logout?client_id={quote(str(auth['client_id']))}&returnTo={return_to}"
+
+
+def render_sign_in(secrets=None) -> None:
     _, centre, _ = st.columns([1, 2, 1])
     with centre:
         st.markdown("## 🎯 Deployment Desk")
@@ -29,16 +47,20 @@ def render_sign_in() -> None:
                  "track record of your calls.")
         if st.button("Sign in with Google", type="primary", width="stretch"):
             st.login()
-        st.caption("Sign-in is handled by Google, so this app never sees your password. Turn on Google's "
-                   "2-Step Verification for extra security. Research tool, not investment advice.")
+        st.caption("Sign-in is handled by Auth0, so this app never sees your password. New accounts must "
+                   "verify their email first. Research tool, not investment advice.")
+        reset = provider_logout_url(secrets) if secrets is not None else None
+        if reset:
+            st.link_button("Use a different account", reset, width="stretch")
 
 
-def render_not_invited(email: str) -> None:
+def render_not_invited(email: str, secrets=None) -> None:
     _, centre, _ = st.columns([1, 2, 1])
     with centre:
         st.markdown("## 🎯 Deployment Desk")
-        st.warning(f"**{email}** isn't on the invite list yet. Ask the owner to add you, then sign in again.")
-        if st.button("Sign out", width="stretch"):
+        st.warning(f"**{email}** isn't on the invite list. If that's the wrong account, sign out and "
+                   "sign in with the right one. Otherwise ask the owner to add you.")
+        if st.button("Sign out and use a different account", type="primary", width="stretch"):
             st.logout()
 
 

@@ -1,13 +1,13 @@
 # Deploying the Deployment Desk — phone, Telegram, friends
 
-**Result:** the Desk runs in the cloud 24/7, you and invited friends sign in with Google on
+**Result:** the Desk runs in the cloud 24/7, you and invited friends sign in (Auth0) on
 any phone or PC, everyone's data is private and permanent, and briefs/alerts arrive on
 Telegram with no PC switched on. **Cost: $0** (all free tiers).
 
 | Piece | Service | What it does |
 |---|---|---|
 | App | Streamlit Community Cloud | Hosts `appV2.py`; you add it to your iPhone Home Screen |
-| Sign-in | Google (via Streamlit's `st.login`) | Passwords and 2-step verification are Google's; the app never sees a password |
+| Sign-in | Auth0 (via Streamlit's `st.login`) | Free, no card; passwords and email verification are Auth0's; the app never sees a password |
 | Data | Supabase (Postgres) | Each user's holdings, lists, journal, settings — permanent; app restarts don't touch it |
 | Alerts | Telegram bot | One bot; each user links their own chat and only gets their own messages |
 | Schedule | GitHub Actions | 8:30am + 3:30pm ET briefs, dip-price crossings every 30 min, 6:30pm insider scan |
@@ -47,27 +47,33 @@ Allow ~30–40 minutes the first time. Do the steps in order.
 Note: free projects pause after about a week with no activity; the daily briefs keep it
 active. A paused project keeps its data — press *Restore* in the dashboard if it ever pauses.
 
-## 3. Google sign-in (10 min)
+## 3. Sign-in with Auth0 (10 min, free, no card)
 
-1. **console.cloud.google.com** → top bar project picker → **New project** (e.g. *Deployment Desk*).
-2. **APIs & Services → OAuth consent screen**: *External*; app name *Deployment Desk*; your
-   email as support + developer contact; scopes: leave the defaults (email, profile, openid).
-   Then **Publish app** (basic sign-in scopes need no Google review). If you keep it in
-   *Testing*, only emails added as *test users* can sign in — also fine, just stricter.
-3. **APIs & Services → Credentials → Create credentials → OAuth client ID** → type
-   *Web application*. Under **Authorized redirect URIs** add:
-   - `http://localhost:8501/oauth2callback` (to test on your PC)
-   - `https://YOUR-APP-NAME.streamlit.app/oauth2callback` (fill in after step 5; you can edit later)
-4. Copy the **Client ID** and **Client secret**.
-5. Turn on **2-Step Verification** for your own Google account (myaccount.google.com →
-   Security). Ask friends to do the same — that's the app's security step.
+We use **Auth0** (by Okta) instead of a Google Cloud project: free up to 25,000 users,
+no card at signup, and Streamlit's `st.login` supports it directly.
+
+1. **auth0.com** → *Sign up* → region **US**. Your tenant domain looks like `dev-xxxx.us.auth0.com`.
+2. **Applications → Applications → + Create Application** → name *Deployment Desk*, type
+   **Regular Web Applications** → *Create* (skip the quickstart).
+3. **Settings** tab → *Application URIs*:
+   - **Allowed Callback URLs:** `http://localhost:8501/oauth2callback` (add the cloud one in step 5)
+   - **Allowed Logout URLs:** `http://localhost:8501` (add the cloud one in step 5)
+   → **Save**.
+4. **Connections** tab: keep **Username-Password-Authentication** on (and *google-oauth2* if you
+   like). New email/password users must click Auth0's verification email; the Desk refuses
+   unverified emails.
+5. Copy **Domain**, **Client ID**, **Client Secret** for the `[auth]` block in step 4.
 
 ## 4. Try it on your PC first (5 min)
 
 1. Copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` (keep your
    `ALPHA_VANTAGE_API_KEY` line) and fill in: `TELEGRAM_BOT_TOKEN`, `SUPABASE_URL`,
-   `SUPABASE_SERVICE_KEY`, `ADMIN_EMAILS = ["your@gmail.com"]`, and the `[auth]` block with
-   `redirect_uri = "http://localhost:8501/oauth2callback"` and a random `cookie_secret`:
+   `SUPABASE_SERVICE_KEY`, `ADMIN_EMAILS = ["your@email.com"]`, and — **last in the file** — the
+   `[auth]` block (see `.streamlit/secrets.toml.example`): `redirect_uri =
+   "http://localhost:8501/oauth2callback"`, the Auth0 client id/secret, `server_metadata_url =
+   "https://YOUR-DOMAIN/.well-known/openid-configuration"`, `client_kwargs = { prompt = "login" }`
+   (always show the sign-in screen, so a wrong account is never silently reused) and a random
+   `cookie_secret` (never share it):
    ```
    python -c "import secrets; print(secrets.token_hex(32))"
    ```
@@ -77,7 +83,9 @@ active. A paused project keeps its data — press *Restore* in the dashboard if 
    python scripts/migrate_local_to_cloud.py your@gmail.com --dry-run   # shows what it will copy
    python scripts/migrate_local_to_cloud.py your@gmail.com
    ```
-3. `streamlit run appV2.py` → **Sign in with Google** → your lists should all be there.
+3. `streamlit run appV2.py` → **Sign in** → Auth0 → your lists should all be there. Signed in
+   with the wrong account? Use **Sign out and use a different account** (or *Use a different
+   account* on the sign-in page).
 4. **More → 📱 Phone & alerts → Connect Telegram** → tap *Open Telegram* → **Start** →
    back in the app press **I pressed Start** → you get "✅ Connected". Try *Send a test message*.
 
@@ -92,8 +100,8 @@ To go back to plain local mode at any time, remove the `[auth]` block from secre
    pick a custom URL (e.g. `hunter-desk`) → **Advanced settings**: Python 3.12, and paste your
    whole `secrets.toml` into **Secrets**, changing `redirect_uri` to
    `https://hunter-desk.streamlit.app/oauth2callback`. **Deploy.**
-3. Back in Google Cloud → Credentials → your OAuth client → make sure that exact cloud
-   redirect URI is listed. Save.
+3. Back in Auth0 → your application → Settings: add `https://hunter-desk.streamlit.app/oauth2callback`
+   to **Allowed Callback URLs** and `https://hunter-desk.streamlit.app` to **Allowed Logout URLs**. Save.
 4. Open the app URL → sign in. The public URL shows only the sign-in page to anyone not invited.
 
 ## 6. Turn on the schedule (3 min)
@@ -119,21 +127,21 @@ their email; they're locked out on their next visit.
 ## Security checklist
 
 - Invite-only; unverified Google emails refused; nobody can sign up on their own.
-- No passwords stored anywhere by the Desk; Google 2-step verification recommended for all.
+- No passwords stored by the Desk; Auth0 handles them and requires email verification.
 - Each user's data is keyed to their email; the app never keeps "the current user" in a
   global (Streamlit serves everyone from one process), and it refuses to start if sign-in is
   on without the database, so users can never share a local file.
 - The Supabase table has row-level security on with no policies: only the service key
   (in Streamlit secrets + GitHub secrets, never in code) can read it.
-- If a key ever leaks: Supabase → API → rotate the service key; BotFather → `/revoke`; Google
-  → reset the client secret. Then update the three secrets boxes.
+- If a key ever leaks: Supabase → API → rotate the service key; BotFather → `/revoke`; Auth0 → rotate the client secret. Then update the three secrets boxes.
 - The repo holds code only — `.streamlit/secrets.toml` and `portfolio_data/` are gitignored.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| "redirect_uri_mismatch" from Google | The redirect URI in secrets must exactly match one listed on the OAuth client |
+| "Callback URL mismatch" from Auth0 | The `redirect_uri` in secrets must exactly match an *Allowed Callback URL* in Auth0 |
+| Keeps signing in as the wrong account | Sign out, then *Use a different account* (clears Auth0's remembered login) |
 | "Refusing to start … database isn't configured" | `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` missing from the app's secrets |
 | "isn't on the invite list" | Add the email under More → Friends (or to `ADMIN_EMAILS`) |
 | No Telegram briefs | Actions tab → check the latest *desk-alerts* run log; confirm the three repo secrets |

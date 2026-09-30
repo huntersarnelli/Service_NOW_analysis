@@ -147,7 +147,7 @@ def sign_in_gate(secrets) -> None:
                  "Refusing to start so users can't see each other's data.")
         st.stop()
     if not st.user.is_logged_in:
-        render_sign_in()
+        render_sign_in(secrets)
         st.stop()
     email = str(st.user.get("email") or "").strip().lower()
     if not email or st.user.get("email_verified") is False:
@@ -157,7 +157,7 @@ def sign_in_gate(secrets) -> None:
         st.stop()
     shared = shared_store(secrets)
     if not is_allowed(email, secrets, shared):
-        render_not_invited(email)
+        render_not_invited(email, secrets)
         st.stop()
     st.session_state["signed_in_email"] = email
     st.session_state["user_store"] = user_store(email, secrets)
