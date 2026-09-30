@@ -107,7 +107,8 @@ To go back to plain local mode at any time, remove the `[auth]` block from secre
 ## 6. Turn on the schedule (3 min)
 
 1. GitHub → `Service_NOW_analysis` → **Settings → Secrets and variables → Actions → New
-   repository secret**, three times: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TELEGRAM_BOT_TOKEN`.
+   repository secret**, four times: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `TELEGRAM_BOT_TOKEN`,
+   `SEC_USER_AGENT` (e.g. `Your Name you@example.com`).
 2. **Actions** tab → *desk-alerts* → **Run workflow** (mode `morning`, force ✓) → a brief
    should arrive on Telegram within ~2 minutes. After that it runs by itself on trading days.
 

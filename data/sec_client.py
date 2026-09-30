@@ -7,11 +7,21 @@ intermittent 503s during long scans.
 
 from __future__ import annotations
 
+import os
 import time
 
 import requests
 
-SEC_USER_AGENT = "Hunter Sarnelli huntersarnelli1@gmail.com"
+# The SEC requires a contact name + email in every request. It comes from the SEC_USER_AGENT
+# secret / environment variable (Streamlit exposes top-level secrets as environment variables;
+# GitHub Actions passes it from the repo secrets) so no personal email lives in this public repo.
+FALLBACK_USER_AGENT = "Deployment Desk (set SEC_USER_AGENT)"
+
+
+def user_agent() -> str:
+    """Read at request time, not import time: Streamlit only puts secrets into the
+    environment once they are first loaded, which is after this module is imported."""
+    return os.environ.get("SEC_USER_AGENT", "").strip() or FALLBACK_USER_AGENT
 SECONDS_BETWEEN_REQUESTS = 0.2
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 _last_request = 0.0
@@ -30,7 +40,7 @@ def sec_get(url: str, attempts: int = 4, timeout: int = 30) -> requests.Response
     for attempt in range(1, attempts + 1):
         _wait()
         try:
-            response = requests.get(url, headers={"User-Agent": SEC_USER_AGENT}, timeout=timeout)
+            response = requests.get(url, headers={"User-Agent": user_agent()}, timeout=timeout)
             if response.status_code not in RETRYABLE_STATUS or attempt == attempts:
                 return response
         except (requests.Timeout, requests.ConnectionError):

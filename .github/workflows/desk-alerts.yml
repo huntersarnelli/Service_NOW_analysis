@@ -2,7 +2,7 @@
 # GitHub cron is in UTC and can run a few minutes late. Each ET slot is listed at two
 # UTC times (EDT and EST); the script's --at window makes the wrong one exit quietly.
 # Secrets needed (repo Settings → Secrets and variables → Actions):
-#   SUPABASE_URL, SUPABASE_SERVICE_KEY, TELEGRAM_BOT_TOKEN
+#   SUPABASE_URL, SUPABASE_SERVICE_KEY, TELEGRAM_BOT_TOKEN, SEC_USER_AGENT
 
 name: desk-alerts
 
@@ -56,4 +56,5 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
         run: python scripts/send_briefs.py ${{ steps.pick.outputs.args }}
