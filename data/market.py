@@ -131,6 +131,95 @@ def get_data_batch(
         cleaned = _clean(frame)
         if cleaned is not None:
             out[t] = cleaned
+    return fill_missing_today(out, latest_daily_row=pd.Timestamp(raw.index.max()))
+
+
+def _session_started_today() -> Optional[pd.Timestamp]:
+    """Today's date (New York) if it's a weekday after the 9:30 open, else None."""
+    try:
+        from zoneinfo import ZoneInfo
+        now = datetime.now(ZoneInfo("America/New_York"))
+    except Exception:  # noqa: BLE001 -- no tz database
+        return None
+    if now.weekday() >= 5 or (now.hour, now.minute) < (9, 35):
+        return None
+    return pd.Timestamp(now.date())
+
+
+def _intraday_bars(tickers: list[str]) -> dict[str, pd.DataFrame]:
+    """Regular-session 5-minute bars for the last two days, tz-naive New York time."""
+    try:
+        raw = yf.download(tickers, period="2d", interval="5m", prepost=False, group_by="ticker",
+                          auto_adjust=True, threads=True, progress=False)
+    except Exception:  # noqa: BLE001
+        return {}
+    if raw is None or raw.empty:
+        return {}
+    out: dict[str, pd.DataFrame] = {}
+    multi = isinstance(raw.columns, pd.MultiIndex)
+    for t in tickers:
+        try:
+            frame = raw[t] if multi else raw
+        except KeyError:
+            continue
+        if "Close" not in frame.columns:
+            continue
+        frame = frame.dropna(subset=["Close"])
+        if frame.empty:
+            continue
+        idx = pd.to_datetime(frame.index)
+        if getattr(idx, "tz", None) is not None:
+            idx = idx.tz_convert("America/New_York").tz_localize(None)
+        out[t] = frame.set_axis(idx)
+    return out
+
+
+def _naive_day(ts) -> pd.Timestamp:
+    ts = pd.Timestamp(ts)
+    if ts.tzinfo is not None:
+        ts = ts.tz_localize(None)
+    return ts.normalize()
+
+
+def fill_missing_today(
+    frames: dict[str, pd.DataFrame],
+    latest_daily_row=None,
+    intraday: Optional[dict[str, pd.DataFrame]] = None,
+    session_day=None,
+) -> dict[str, pd.DataFrame]:
+    """
+    Add today's bar where Yahoo's daily data doesn't have it yet.
+
+    After the close, Yahoo's daily download can hold today's row with Close = NaN,
+    which _clean drops -- so the screen silently ran on yesterday's close (the
+    Sept 30 2026 brief). For those tickers, build today's bar from the regular-session
+    5-minute bars: first open, high, low, last close, summed volume.
+    """
+    if session_day is None:
+        session_day = _session_started_today()
+    days = [_naive_day(d) for d in (latest_daily_row, session_day) if d is not None]
+    if not days:
+        return frames
+    expected = max(days)
+    stale = [t for t, df in frames.items() if _naive_day(df.index.max()) < expected]
+    if not stale:
+        return frames
+    if intraday is None:
+        intraday = _intraday_bars(stale)
+    out = dict(frames)
+    for t in stale:
+        bars = intraday.get(t)
+        if bars is None or bars.empty:
+            continue
+        day = _naive_day(bars.index.max())
+        if day <= _naive_day(out[t].index.max()):
+            continue  # nothing newer intraday (e.g. a holiday) -- keep the daily data as is
+        today = bars[bars.index.normalize() == day]
+        row = {"Open": today["Open"].iloc[0], "High": today["High"].max(),
+               "Low": today["Low"].min(), "Close": today["Close"].iloc[-1],
+               "Volume": today["Volume"].sum() if "Volume" in today.columns else np.nan}
+        new = pd.DataFrame([{c: row[c] for c in out[t].columns if c in row}], index=[day])
+        out[t] = pd.concat([out[t], new])
     return out
 
 

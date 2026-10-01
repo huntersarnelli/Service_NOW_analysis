@@ -118,6 +118,31 @@ toggled = toggle_want_to_buy({WANT_TO_BUY: ["AMZN"]}, "NVDA")
 check("⭐ adds, and ⭐ again removes", toggled[WANT_TO_BUY] == ["AMZN", "NVDA"]
       and toggle_want_to_buy(toggled, "NVDA")[WANT_TO_BUY] == ["AMZN"])
 
+check("🎯 title shows the price, then the dip price",
+      by_ticker["MSFT"]["title"].startswith("MSFT $") and "is below its dip price $" in by_ticker["MSFT"]["title"])
+
+# --- today's bar missing from Yahoo's daily data (Sept 30 2026: daily Close was NaN after the close)
+from data.market import fill_missing_today  # noqa: E402
+
+daily = pd.DataFrame({"Open": [10.0, 11.0], "High": [11.0, 12.0], "Low": [9.0, 10.0],
+                      "Close": [10.5, 11.5], "Volume": [100, 100]},
+                     index=pd.to_datetime(["2026-09-28", "2026-09-29"]))
+five = pd.DataFrame({"Open": [12.0, 12.5, 13.0], "High": [12.6, 13.4, 13.2], "Low": [11.8, 12.4, 12.9],
+                     "Close": [12.5, 13.0, 13.1], "Volume": [5, 6, 7]},
+                    index=pd.to_datetime(["2026-09-29 15:55", "2026-09-30 09:30", "2026-09-30 15:55"]))
+filled = fill_missing_today({"AMZN": daily}, latest_daily_row=pd.Timestamp("2026-09-30"),
+                            intraday={"AMZN": five}, session_day=None)["AMZN"]
+last = filled.iloc[-1]
+check("missing today's bar is built from 5-minute bars", filled.index[-1] == pd.Timestamp("2026-09-30")
+      and last["Close"] == 13.1 and last["Open"] == 12.5 and last["High"] == 13.4 and last["Low"] == 12.4
+      and last["Volume"] == 13, str(last.to_dict()))
+check("a ticker that already has today's bar is left alone",
+      fill_missing_today({"X": filled}, latest_daily_row=pd.Timestamp("2026-09-30"),
+                         intraday={"X": five}, session_day=None)["X"].equals(filled))
+check("holiday: intraday has nothing newer, daily data kept",
+      fill_missing_today({"AMZN": daily}, latest_daily_row=None, session_day=pd.Timestamp("2026-09-30"),
+                         intraday={"AMZN": five[five.index < "2026-09-30"]})["AMZN"].equals(daily))
+
 print()
 print("ALL CHECKS PASSED" if not fails else f"{len(fails)} FAILED: {fails}")
 sys.exit(1 if fails else 0)
