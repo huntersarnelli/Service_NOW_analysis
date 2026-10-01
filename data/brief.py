@@ -94,7 +94,7 @@ def build_brief(result, groups, holdings, premarket: pd.DataFrame, pending_trade
     for w in watch:
         if w["state"] == "crossed":
             items.append({"icon": "🎯", "kind": "target", "ticker": w["ticker"],
-                          "title": f"{w['ticker']} is below its dip price (${w['dip_price']:,.2f})",
+                          "title": f"{w['ticker']} ${w['price']:,.2f} is below its dip price ${w['dip_price']:,.2f}",
                           "detail": f"If it closes here it's {w['would_be']}. Dips are judged on the "
                                     "closing price, so this can still change before 4pm."})
 
